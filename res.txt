@@ -18267,6 +18267,9 @@ do
 								Active = false,
 								Task = nil,
 							},
+							NaNState = { Active = false, Task = nil },
+							InfinityState = { Active = false, Task = nil },
+							DesyncState = { Active = false, Task = nil },
 							ErisKickSelected = {},
 						}
 
@@ -37267,6 +37270,68 @@ Escape Timer: %*]]
 				tbl12.RestartErisKick()
 			end,
 		})
+		
+							v20:AddDivider("Critical Methods")
+
+					local NaNBtn = v20:AddToggle("NaNKickToggle", {
+						Text = "NaN Kick [CRITICAL]",
+						Default = false,
+						Tooltip = "Ломает координаты цели (0/0). Сервер выдает ошибку CFrame.",
+						Callback = function(enabled)
+							tbl7.NaNState.Active = enabled
+							if enabled then
+								if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then
+									fn18("Select target first", "NaN Kick")
+									NaNBtn:SetValue(false)
+									tbl7.NaNState.Active = false
+									return
+								end
+								tbl7.NaNState.Task = task.spawn(function() tbl12.NaNKick(tbl9.ErisKickTarget) end)
+							else
+								if tbl7.NaNState.Task then pcall(task.cancel, tbl7.NaNState.Task); tbl7.NaNState.Task = nil end
+							end
+						end,
+					})
+
+					local InfBtn = v20:AddToggle("InfinityKickToggle", {
+						Text = "Infinity Kick [CRITICAL]",
+						Default = false,
+						Tooltip = "Применяет бесконечную скорость. Сервер выдает ошибку физики.",
+						Callback = function(enabled)
+							tbl7.InfinityState.Active = enabled
+							if enabled then
+								if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then
+									fn18("Select target first", "Infinity Kick")
+									InfBtn:SetValue(false)
+									tbl7.InfinityState.Active = false
+									return
+								end
+								tbl7.InfinityState.Task = task.spawn(function() tbl12.InfinityKick(tbl9.ErisKickTarget) end)
+							else
+								if tbl7.InfinityState.Task then pcall(task.cancel, tbl7.InfinityState.Task); tbl7.InfinityState.Task = nil end
+							end
+						end,
+					})
+
+					local DesyncBtn = v20:AddToggle("DesyncKickToggle", {
+						Text = "Desync Kick [CRITICAL]",
+						Default = false,
+						Tooltip = "Телепортирует вверх/вниз со скоростью кадра. Вызывает Connection Lost.",
+						Callback = function(enabled)
+							tbl7.DesyncState.Active = enabled
+							if enabled then
+								if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then
+									fn18("Select target first", "Desync Kick")
+									DesyncBtn:SetValue(false)
+									tbl7.DesyncState.Active = false
+									return
+								end
+								tbl7.DesyncState.Task = task.spawn(function() tbl12.DesyncKick(tbl9.ErisKickTarget) end)
+							else
+								if tbl7.DesyncState.Task then pcall(task.cancel, tbl7.DesyncState.Task); tbl7.DesyncState.Task = nil end
+							end
+						end,
+					})
 
 		v20:AddDropdown("MethodSettingsTargets", {
 			Values = {
@@ -41627,7 +41692,106 @@ Escape Timer: %*]]
 							tbl12.ErisKick(name)
 						end)
 					end
+											-- ==========================================
+					-- 1. NAN KICK (Ошибка координат)
+					-- ==========================================
+					tbl12.NaNKick = function(playerName)
+						local s = tbl7.NaNState
+						local targetPlayer = Players:FindFirstChild(playerName)
+						if not targetPlayer then return end
 
+						while s.Active do
+							local target = Players:FindFirstChild(playerName)
+							if not target or not target.Parent then break end
+							
+							local targetChar = target.Character
+							local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+							
+							if targetRoot then
+								pcall(function()
+									tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
+									tbl11.DestroyGrabLine:FireServer(targetRoot)
+									-- Ломаем CFrame
+									targetRoot.CFrame = CFrame.new(0/0, 0/0, 0/0)
+								end)
+							end
+							RunService.Heartbeat:Wait()
+						end
+					end
+
+					-- ==========================================
+					-- 2. INFINITY KICK (Ошибка скорости)
+					-- ==========================================
+					tbl12.InfinityKick = function(playerName)
+						local s = tbl7.InfinityState
+						local targetPlayer = Players:FindFirstChild(playerName)
+						if not targetPlayer then return end
+
+						while s.Active do
+							local target = Players:FindFirstChild(playerName)
+							if not target or not target.Parent then break end
+							
+							local targetChar = target.Character
+							local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+							
+							if targetRoot then
+								pcall(function()
+									tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
+									
+									if not targetRoot:FindFirstChild("Inf_Velocity") then
+										local bv = Instance.new("BodyVelocity")
+										bv.Name = "Inf_Velocity"
+										bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+										bv.Velocity = Vector3.new(math.huge, math.huge, math.huge)
+										bv.Parent = targetRoot
+									end
+								end)
+							end
+							RunService.Heartbeat:Wait()
+						end
+						
+						-- Очистка при выключении
+						if targetPlayer.Character then
+							local root = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+							if root and root:FindFirstChild("Inf_Velocity") then
+								root.Inf_Velocity:Destroy()
+							end
+						end
+					end
+
+					-- ==========================================
+					-- 3. DESYNC KICK (Ошибка сети)
+					-- ==========================================
+					tbl12.DesyncKick = function(playerName)
+						local s = tbl7.DesyncState
+						local targetPlayer = Players:FindFirstChild(playerName)
+						if not targetPlayer then return end
+
+						while s.Active do
+							local target = Players:FindFirstChild(playerName)
+							if not target or not target.Parent then break end
+							
+							local targetChar = target.Character
+							local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+							
+							if targetRoot then
+								pcall(function()
+									tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
+									tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
+									
+									-- Рвем сеть, телепортируя вверх и вниз
+									targetRoot.CFrame = CFrame.new(targetRoot.Position.X, 10000, targetRoot.Position.Z)
+									task.wait()
+									if targetRoot.Parent then
+										targetRoot.CFrame = CFrame.new(targetRoot.Position.X, -10000, targetRoot.Position.Z)
+									end
+									
+									tbl11.DestroyGrabLine:FireServer(targetRoot)
+								end)
+							end
+							RunService.Heartbeat:Wait()
+						end
+					end
 	
 	tbl12.AddKeybind = function(arg, arg2, arg3, arg4, arg5, arg6)
 		arg:AddLabel(arg3):AddKeyPicker(arg2, { Text = arg3, Default = arg4, NoUI = true, Mode = arg5, Callback = arg6 })
