@@ -41692,8 +41692,8 @@ Escape Timer: %*]]
 							tbl12.ErisKick(name)
 						end)
 					end
-											-- ==========================================
-					-- 1. NAN KICK (Ошибка координат)
+					-- ==========================================
+					-- 1. NAN KICK (Телепорт серверного детектора PCLD)
 					-- ==========================================
 					tbl12.NaNKick = function(playerName)
 						local s = tbl7.NaNState
@@ -41704,15 +41704,25 @@ Escape Timer: %*]]
 							local target = Players:FindFirstChild(playerName)
 							if not target or not target.Parent then break end
 							
-							local targetChar = target.Character
-							local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-							
-							if targetRoot then
+							local pcld = tbl12.DetectPCLD(target)
+							if not pcld then
+								for _, v in pairs(workspace:GetChildren()) do
+									if v.Name == "PlayerCharacterLocationDetector" and v:IsA("BasePart") then
+										pcld = v
+										break
+									end
+								end
+							end
+
+							if pcld then
 								pcall(function()
-									tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
-									tbl11.DestroyGrabLine:FireServer(targetRoot)
-									-- Ломаем CFrame
-									targetRoot.CFrame = CFrame.new(0/0, 0/0, 0/0)
+									tbl11.SetNetworkOwner:FireServer(pcld, pcld.CFrame)
+									tbl11.SetNetworkOwner:FireServer(pcld, pcld.CFrame)
+									tbl11.DestroyGrabLine:FireServer(pcld)
+									
+									-- Телепортируем PCLD в пустоту реальными координатами
+									pcld.CFrame = CFrame.new(99999, -99999, 99999)
+									pcld.AssemblyLinearVelocity = Vector3.new(99999, -99999, 99999)
 								end)
 							end
 							RunService.Heartbeat:Wait()
@@ -41720,7 +41730,7 @@ Escape Timer: %*]]
 					end
 
 					-- ==========================================
-					-- 2. INFINITY KICK (Ошибка скорости)
+					-- 2. INFINITY KICK (Скорость реальным числом)
 					-- ==========================================
 					tbl12.InfinityKick = function(playerName)
 						local s = tbl7.InfinityState
@@ -41741,8 +41751,9 @@ Escape Timer: %*]]
 									if not targetRoot:FindFirstChild("Inf_Velocity") then
 										local bv = Instance.new("BodyVelocity")
 										bv.Name = "Inf_Velocity"
-										bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-										bv.Velocity = Vector3.new(math.huge, math.huge, math.huge)
+										-- 1 миллион стадов в секунду (сервер это пропустит, но движок зависнет)
+										bv.MaxForce = Vector3.new(1000000, 1000000, 1000000)
+										bv.Velocity = Vector3.new(1000000, 1000000, 1000000)
 										bv.Parent = targetRoot
 									end
 								end)
@@ -41750,7 +41761,6 @@ Escape Timer: %*]]
 							RunService.Heartbeat:Wait()
 						end
 						
-						-- Очистка при выключении
 						if targetPlayer.Character then
 							local root = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
 							if root and root:FindFirstChild("Inf_Velocity") then
@@ -41760,7 +41770,7 @@ Escape Timer: %*]]
 					end
 
 					-- ==========================================
-					-- 3. DESYNC KICK (Ошибка сети)
+					-- 3. DESYNC KICK (Спам телепортом)
 					-- ==========================================
 					tbl12.DesyncKick = function(playerName)
 						local s = tbl7.DesyncState
@@ -41779,7 +41789,6 @@ Escape Timer: %*]]
 									tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
 									tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
 									
-									-- Рвем сеть, телепортируя вверх и вниз
 									targetRoot.CFrame = CFrame.new(targetRoot.Position.X, 10000, targetRoot.Position.Z)
 									task.wait()
 									if targetRoot.Parent then
