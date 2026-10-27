@@ -18263,21 +18263,11 @@ do
 							PacketData = {},
 							LineData = {},
 							FlingState = { Method = "PalletLightBrown" },
-							VoidPCLDState = { Active = false, Task = nil },
-							LineKickState = { Active = false, Task = nil },
-							NaNState = { Active = false, Task = nil },
-							InfinityState = { Active = false, Task = nil },
-							DesyncState = { Active = false, Task = nil },
-							ErisKick = {
-								Active = false,
-								Task = nil,
-							},
-							NaNState = { Active = false, Task = nil },
-							InfinityState = { Active = false, Task = nil },
-							DesyncState = { Active = false, Task = nil },
+							
+							ErisKick = { Active = false, Task = nil },
 							ErisKickSelected = {},
+							DesyncKickState = { Active = false, Task = nil },
 						}
-
 					end
 
 					do
@@ -37205,215 +37195,81 @@ Escape Timer: %*]]
 
 	do
 		local v20 = tbl15.Target:AddRightGroupbox("Method Settings", "apple")
-		
-				v20:AddDivider("Eris Kick")
+
+		v20:AddDivider("Kick Methods")
 
 		tbl12.CreatePlayerDropdown(v20, "ErisKickTargetDD", tbl7.ErisKickSelected, false, false, function(sel)
 			tbl9.ErisKickTarget = sel and sel.Name or nil
-			if tbl7.ErisKick.Active then
-				tbl12.RestartErisKick()
-			end
-		end, "Eris Kick Target")
+		end, "Select Target")
 
 		local ErisKickToggle = v20:AddToggle("ErisKickToggle", {
 			Text = "Eris Kick [Enhanced]",
 			Default = false,
-			Tooltip = "Усиленный кик через AlignPosition (порт Eris Hub)",
+			Tooltip = "Удерживает цель в воздухе без спама сети",
 			Callback = function(enabled)
 				tbl7.ErisKick.Active = enabled
 				if enabled then
 					if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then
-						fn18("Select an Eris Kick target first", "Eris Kick")
-						tbl7.ErisKick.Active = false
+						fn18("Select target first", "Eris Kick")
 						ErisKickToggle:SetValue(false)
+						tbl7.ErisKick.Active = false
 						return
 					end
-					tbl12.RestartErisKick()
+					tbl7.ErisKick.Task = task.spawn(function() tbl12.ErisKick(tbl9.ErisKickTarget) end)
 				else
-					tbl12.StopErisKick()
+					if tbl7.ErisKick.Task then pcall(task.cancel, tbl7.ErisKick.Task); tbl7.ErisKick.Task = nil end
 				end
 			end,
 		})
-		ErisKickToggle:AddKeyPicker("ErisKickKey", {
-			Text = "Eris Kick",
-			Mode = "Toggle",
-			SyncToggleState = true,
-			NoUI = false,
-		})
+		ErisKickToggle:AddKeyPicker("ErisKickKey", { Text = "Eris Kick", Mode = "Toggle", SyncToggleState = true, NoUI = false })
 
-		v20:AddSlider("ErisKickHeight", {
-			Text = "Eris Kick Height",
-			Default = 22,
-			Min = 10,
-			Max = 40,
-			Rounding = 0,
-			Compact = true,
-			Callback = function(v) tbl9.ErisKickHeight = v end,
-		})
+		v20:AddSlider("ErisKickHeight", { Text = "Kick Height", Default = 22, Min = 10, Max = 40, Rounding = 0, Compact = true, Callback = function(v) tbl9.ErisKickHeight = v end })
 
-		v20:AddSlider("ErisKickDelay", {
-			Text = "Eris Kick Delay",
-			Default = 0.05,
-			Min = 0.001,
-			Max = 0.5,
-			Rounding = 3,
-			Compact = true,
-			Callback = function(v) tbl9.ErisKickDelay = v end,
-		})
-
-		v20:AddButton({
-			Text = "Apply Eris Kick (Once)",
-			Func = function()
-				if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then
-					fn18("Select an Eris Kick target first", "Eris Kick")
-					return
+		local DesyncBtn = v20:AddToggle("DesyncKickToggle", { 
+			Text = "Desync Kick [CRITICAL]", 
+			Default = false, 
+			Tooltip = "Телепортирует цель вверх и вниз, разрывая соединение",
+			Callback = function(e)
+				tbl7.DesyncKickState.Active = e
+				if e then
+					if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then 
+						fn18("Select target first", "Desync")
+						DesyncBtn:SetValue(false)
+						tbl7.DesyncKickState.Active = false
+						return 
+					end
+					tbl7.DesyncKickState.Task = task.spawn(function() 
+						tbl12.DesyncKick(tbl9.ErisKickTarget) 
+					end)
+				else
+					if tbl7.DesyncKickState.Task then 
+						pcall(task.cancel, tbl7.DesyncKickState.Task)
+						tbl7.DesyncKickState.Task = nil 
+					end
 				end
-				if not tbl7.ErisKick.Active then
-					tbl7.ErisKick.Active = true
-					ErisKickToggle:SetValue(true)
-				end
-				tbl12.RestartErisKick()
+			end 
+		})
+
+		v20:AddDropdown("MethodSettingsTargets", {
+			Values = {
+				"Kick",
+				"Void",
+				"Kill",
+				"Bring",
+				"Destroy Food",
+				"Remove Gucci",
+				"Remove Invisibility",
+				"Delete Seatables",
+			},
+			Multi = true,
+			AllowNull = true,
+			Text = "Methods",
+			Callback = function(targetMethods)
+				tbl7.TargetMethods = targetMethods
 			end,
 		})
-		
-							v20:AddDivider("Critical Methods")
+	end
 
-					local NaNBtn = v20:AddToggle("NaNKickToggle", {
-						Text = "NaN Kick [CRITICAL]",
-						Default = false,
-						Tooltip = "Ломает координаты цели (0/0). Сервер выдает ошибку CFrame.",
-						Callback = function(enabled)
-							tbl7.NaNState.Active = enabled
-							if enabled then
-								if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then
-									fn18("Select target first", "NaN Kick")
-									NaNBtn:SetValue(false)
-									tbl7.NaNState.Active = false
-									return
-								end
-								tbl7.NaNState.Task = task.spawn(function() tbl12.NaNKick(tbl9.ErisKickTarget) end)
-							else
-								if tbl7.NaNState.Task then pcall(task.cancel, tbl7.NaNState.Task); tbl7.NaNState.Task = nil end
-							end
-						end,
-					})
-
-					local InfBtn = v20:AddToggle("InfinityKickToggle", {
-						Text = "Infinity Kick [CRITICAL]",
-						Default = false,
-						Tooltip = "Применяет бесконечную скорость. Сервер выдает ошибку физики.",
-						Callback = function(enabled)
-							tbl7.InfinityState.Active = enabled
-							if enabled then
-								if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then
-									fn18("Select target first", "Infinity Kick")
-									InfBtn:SetValue(false)
-									tbl7.InfinityState.Active = false
-									return
-								end
-								tbl7.InfinityState.Task = task.spawn(function() tbl12.InfinityKick(tbl9.ErisKickTarget) end)
-							else
-								if tbl7.InfinityState.Task then pcall(task.cancel, tbl7.InfinityState.Task); tbl7.InfinityState.Task = nil end
-							end
-						end,
-					})
-
-					local DesyncBtn = v20:AddToggle("DesyncKickToggle", {
-						Text = "Desync Kick [CRITICAL]",
-						Default = false,
-						Tooltip = "Телепортирует вверх/вниз со скоростью кадра. Вызывает Connection Lost.",
-						Callback = function(enabled)
-							tbl7.DesyncState.Active = enabled
-							if enabled then
-								if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then
-									fn18("Select target first", "Desync Kick")
-									DesyncBtn:SetValue(false)
-									tbl7.DesyncState.Active = false
-									return
-								end
-								tbl7.DesyncState.Task = task.spawn(function() tbl12.DesyncKick(tbl9.ErisKickTarget) end)
-							else
-								if tbl7.DesyncState.Task then pcall(task.cancel, tbl7.DesyncState.Task); tbl7.DesyncState.Task = nil end
-							end
-						end,
-					})
-		
-							v20:AddDivider("Kick Methods")
-
-					local ErisKickToggle = v20:AddToggle("ErisKickToggle", {
-						Text = "Eris Kick [Enhanced]",
-						Default = false,
-						Tooltip = "Усиленный кик через AlignPosition и Velocity",
-						Callback = function(enabled)
-							tbl7.ErisKick.Active = enabled
-							if enabled then
-								if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then
-									fn18("Select target first", "Eris Kick")
-									ErisKickToggle:SetValue(false)
-									tbl7.ErisKick.Active = false
-									return
-								end
-								tbl7.ErisKick.Task = task.spawn(function() tbl12.ErisKick(tbl9.ErisKickTarget) end)
-							else
-								if tbl7.ErisKick.Task then pcall(task.cancel, tbl7.ErisKick.Task); tbl7.ErisKick.Task = nil end
-							end
-						end,
-					})
-					ErisKickToggle:AddKeyPicker("ErisKickKey", { Text = "Eris Kick", Mode = "Toggle", SyncToggleState = true, NoUI = false })
-
-					v20:AddSlider("ErisKickHeight", { Text = "Kick Height", Default = 22, Min = 10, Max = 40, Rounding = 0, Compact = true, Callback = function(v) tbl9.ErisKickHeight = v end })
-
-					v20:AddDivider("Critical Methods")
-
-					local NaNBtn = v20:AddToggle("NaNKickToggle", { Text = "Ownership Kick", Default = false, Callback = function(e)
-						tbl7.NaNState.Active = e
-						if e then
-							if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then fn18("Select target first", "Ownership"); NaNBtn:SetValue(false); tbl7.NaNState.Active = false; return end
-							tbl7.NaNState.Task = task.spawn(function() tbl12.NaNKick(tbl9.ErisKickTarget) end)
-						else
-							if tbl7.NaNState.Task then pcall(task.cancel, tbl7.NaNState.Task); tbl7.NaNState.Task = nil end
-						end
-					end })
-
-					local InfBtn = v20:AddToggle("InfinityKickToggle", { Text = "Blob Kick [Auto-Sit]", Default = false, Callback = function(e)
-						tbl7.InfinityState.Active = e
-						if e then
-							if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then fn18("Select target first", "Blob Kick"); InfBtn:SetValue(false); tbl7.InfinityState.Active = false; return end
-							tbl7.InfinityState.Task = task.spawn(function() tbl12.InfinityKick(tbl9.ErisKickTarget) end)
-						else
-							if tbl7.InfinityState.Task then pcall(task.cancel, tbl7.InfinityState.Task); tbl7.InfinityState.Task = nil end
-						end
-					end })
-
-					local DesyncBtn = v20:AddToggle("DesyncKickToggle", { Text = "Desync Kick", Default = false, Callback = function(e)
-						tbl7.DesyncState.Active = e
-						if e then
-							if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then fn18("Select target first", "Desync"); DesyncBtn:SetValue(false); tbl7.DesyncState.Active = false; return end
-							tbl7.DesyncState.Task = task.spawn(function() tbl12.DesyncKick(tbl9.ErisKickTarget) end)
-						else
-							if tbl7.DesyncState.Task then pcall(task.cancel, tbl7.DesyncState.Task); tbl7.DesyncState.Task = nil end
-						end
-					end })
-
-					local VoidPCLDBtn = v20:AddToggle("VoidPCLDToggle", { Text = "Void PCLD", Default = false, Callback = function(e)
-						tbl7.VoidPCLDState.Active = e
-						if e then
-							if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then fn18("Select target first", "Void PCLD"); VoidPCLDBtn:SetValue(false); tbl7.VoidPCLDState.Active = false; return end
-							tbl7.VoidPCLDState.Task = task.spawn(function() tbl12.VoidPCLD(tbl9.ErisKickTarget) end)
-						else
-							if tbl7.VoidPCLDState.Task then pcall(task.cancel, tbl7.VoidPCLDState.Task); tbl7.VoidPCLDState.Task = nil end
-						end
-					end })
-
-					local LineKickBtn = v20:AddToggle("LineKickToggle", { Text = "Line-Kick", Default = false, Callback = function(e)
-						tbl7.LineKickState.Active = e
-						if e then
-							if not tbl9.ErisKickTarget or not Players:FindFirstChild(tbl9.ErisKickTarget) then fn18("Select target first", "Line-Kick"); LineKickBtn:SetValue(false); tbl7.LineKickState.Active = false; return end
-							tbl7.LineKickState.Task = task.spawn(function() tbl12.LineKick(tbl9.ErisKickTarget) end)
-						else
-							if tbl7.LineKickState.Task then pcall(task.cancel, tbl7.LineKickState.Task); tbl7.LineKickState.Task = nil end
-						end
-					end })
 
 		v20:AddDropdown("MethodSettingsTargets", {
 			Values = {
@@ -41370,8 +41226,8 @@ Escape Timer: %*]]
 						erisClearConstraints()
 					end
 
-					-- ==========================================
-					-- 1. ERIS KICK (Усиленный из Sunapse)
+										-- ==========================================
+					-- 1. ERIS KICK (Удержание + Скорость)
 					-- ==========================================
 					tbl12.ErisKick = function(playerName)
 						local s = tbl7.ErisKick
@@ -41379,6 +41235,14 @@ Escape Timer: %*]]
 						if not targetPlayer then return end
 
 						local lastGrab = 0
+						local bp, bg
+
+						local function cleanup()
+							pcall(function()
+								if bp then bp:Destroy() bp = nil end
+								if bg then bg:Destroy() bg = nil end
+							end)
+						end
 
 						while s.Active do
 							local target = Players:FindFirstChild(playerName)
@@ -41389,378 +41253,111 @@ Escape Timer: %*]]
 							local targetCharacter = target.Character
 							local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
 
-							if not targetCharacter or not targetHumanoid or targetHumanoid.Health <= 0 then
-								pcall(function()
-									targetCharacter = target.CharacterAdded:Wait()
-									targetHumanoid = targetCharacter:WaitForChild("Humanoid", 5)
-								end)
-								RunService.Heartbeat:Wait()
-							else
+							if targetCharacter and targetHumanoid and targetHumanoid.Health > 0 then
 								local targetRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
-								if not (character and rootPart) or not targetRootPart or targetHumanoid.Health <= 0 then
-									RunService.Heartbeat:Wait()
-								elseif (targetRootPart.Position - rootPart.Position).Magnitude > 30 then
-									pcall(function()
-										character:PivotTo(targetRootPart.CFrame * CFrame.new(0, 2, 4))
-									end)
-									RunService.Heartbeat:Wait()
-								else
-									local kickPosition = (rootPart.CFrame * CFrame.new(0, tbl9.ErisKickHeight or 22, 0)).Position
+								if character and rootPart and targetRootPart then
+									local dist = (targetRootPart.Position - rootPart.Position).Magnitude
+									if dist > 30 then
+										pcall(function()
+											character:PivotTo(targetRootPart.CFrame * CFrame.new(0, 2, 4))
+										end)
+									else
+										local kickPosition = (rootPart.CFrame * CFrame.new(0, tbl9.ErisKickHeight or 22, 0)).Position
 
-									if not targetRootPart:FindFirstChild("Kick2Align") then
-										for _, child in pairs(targetRootPart:GetChildren()) do
-											if child:IsA("BodyPosition") or child:IsA("BodyGyro") or child:IsA("AlignPosition") or child:IsA("AlignOrientation") then
-												if child.Name ~= "Kick2Align" and child.Name ~= "Kick2Rot" then
-													pcall(function() child:Destroy() end)
-												end
-											end
+										if not bp or not bp.Parent then
+											bp = Instance.new("BodyPosition")
+											bp.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+											bp.P = 40000000
+											bp.Position = kickPosition
+											bp.Parent = targetRootPart
+
+											bg = Instance.new("BodyGyro")
+											bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+											bg.P = 3000
+											bg.CFrame = CFrame.new(kickPosition)
+											bg.Parent = targetRootPart
 										end
 
-										local attachment = Instance.new("Attachment", targetRootPart)
-										attachment.Name = "Kick2Att0"
-										local anchorAttachment = Instance.new("Attachment", workspace.Terrain)
-										anchorAttachment.Name = "Kick2Att1"
-										
-										local alignPosition = Instance.new("AlignPosition")
-										alignPosition.Name = "Kick2Align"
-										alignPosition.Attachment0 = attachment
-										alignPosition.Attachment1 = anchorAttachment
-										alignPosition.MaxForce = math.huge
-										alignPosition.Responsiveness = 300
-										alignPosition.Parent = targetRootPart
-										
-										local alignOrientation = Instance.new("AlignOrientation")
-										alignOrientation.Name = "Kick2Rot"
-										alignOrientation.Attachment0 = attachment
-										alignOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
-										alignOrientation.CFrame = CFrame.new()
-										alignOrientation.MaxTorque = math.huge
-										alignOrientation.Responsiveness = 300
-										alignOrientation.Parent = targetRootPart
-									end
-
-									local kick2Align = targetRootPart:FindFirstChild("Kick2Align")
-									if kick2Align and kick2Align.Attachment1 then
-										kick2Align.Attachment1.WorldPosition = kickPosition
-									end
-
-									local kick2Rot = targetRootPart:FindFirstChild("Kick2Rot")
-									if kick2Rot then
-										kick2Rot.CFrame = CFrame.Angles(0, 0, 0)
-									end
-
-									pcall(function()
-										targetHumanoid.PlatformStand = true
-										targetRootPart.AssemblyLinearVelocity = Vector3.zero
-										targetRootPart.AssemblyAngularVelocity = Vector3.zero
-									end)
-
-									local now = tick()
-									if now - lastGrab > (tbl9.ErisKickDelay or 0.05) then
 										pcall(function()
+											bp.Position = kickPosition
+											bg.CFrame = CFrame.new(kickPosition)
+											targetHumanoid.PlatformStand = true
+											-- Жесткая скорость из Sunapse для срабатывания античита
+											targetRootPart.AssemblyLinearVelocity = Vector3.new(0, 300, 0)
+										end)
+
+										-- Спам только SetNetworkOwner, без линий (чтобы не крашить)
+										local now = tick()
+										if now - lastGrab > 0.05 then
 											if tbl11.SetNetworkOwner then
 												tbl11.SetNetworkOwner:FireServer(targetRootPart, targetRootPart.CFrame)
 												tbl11.SetNetworkOwner:FireServer(targetRootPart, targetRootPart.CFrame)
-												tbl11.SetNetworkOwner:FireServer(targetRootPart, targetRootPart.CFrame)
 											end
-											
-											if tbl11.CreateGrabLine then
-												tbl11.CreateGrabLine:FireServer(targetRootPart, kickPosition)
-											end
-											
-											if tbl11.DestroyGrabLine then
-												tbl11.DestroyGrabLine:FireServer(targetRootPart)
-											end
-											
-											targetRootPart.AssemblyLinearVelocity = Vector3.new(0, 200, 0)
-										end)
-
-										lastGrab = now
-									end
-
-									RunService.Heartbeat:Wait()
-								end
-							end
-						end
-						
-						local finalTarget = Players:FindFirstChild(playerName)
-						if finalTarget and finalTarget.Character then
-							local finalRoot = finalTarget.Character:FindFirstChild("HumanoidRootPart")
-							if finalRoot then
-								local kick2Align = finalRoot:FindFirstChild("Kick2Align")
-								if kick2Align then
-									if kick2Align.Attachment1 then pcall(function() kick2Align.Attachment1:Destroy() end) end
-									pcall(function() kick2Align:Destroy() end)
-								end
-								local kick2Rot = finalRoot:FindFirstChild("Kick2Rot")
-								if kick2Rot then pcall(function() kick2Rot:Destroy() end) end
-								local kick2Att0 = finalRoot:FindFirstChild("Kick2Att0")
-								if kick2Att0 then pcall(function() kick2Att0:Destroy() end) end
-							end
-						end
-					end
-
-					-- ==========================================
-					-- 2. OWNERSHIP KICK (Из Genesis)
-					-- ==========================================
-					tbl12.NaNKick = function(playerName)
-						local s = tbl7.NaNState
-						local targetPlayer = Players:FindFirstChild(playerName)
-						if not targetPlayer then return end
-
-						local savedPos = localPlayer.Character.HumanoidRootPart.CFrame
-						local dragging, grabStartTime, checkStartTime = false, 0, 0
-						local bp, bg = nil, nil
-
-						local function cleanupBodies()
-							pcall(function()
-								if bp then bp:Destroy() bp = nil end
-								if bg then bg:Destroy() bg = nil end
-							end)
-						end
-
-						while s.Active do
-							local target = Players:FindFirstChild(playerName)
-							if not target or not target.Parent then break end
-							
-							local myChar = localPlayer.Character
-							local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-							local targetChar = target.Character
-							local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-							local targetHum = targetChar and targetChar:FindFirstChild("Humanoid")
-
-							if targetRoot and targetHum and targetHum.Health > 0 and myRoot then
-								if not dragging then
-									myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
-									cleanupBodies()
-									checkStartTime = 0
-
-									pcall(function()
-										targetHum.PlatformStand = true
-										targetHum.Sit = true
-										tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
-										tbl11.DestroyGrabLine:FireServer(targetRoot)
-									end)
-
-									if grabStartTime == 0 then grabStartTime = tick() end
-									if tick() - grabStartTime > 0.35 then
-										dragging, grabStartTime, checkStartTime = true, 0, tick()
-										local lockPos = savedPos * CFrame.new(6, 9, 0)
-										
-										bp = Instance.new("BodyPosition")
-										bp.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-										bp.D = 100
-										bp.Position = lockPos.Position
-										bp.Parent = targetRoot
-										
-										bg = Instance.new("BodyGyro")
-										bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-										bg.D = 100
-										bg.CFrame = CFrame.new(lockPos.Position)
-										bg.Parent = targetRoot
-									end
-								else
-									myRoot.CFrame = savedPos
-									local lockPos = savedPos * CFrame.new(6, 9, 0)
-									if bp and bp.Parent then
-										bp.Position = lockPos.Position
-										if bg then bg.CFrame = lockPos end
-									end
-									targetHum.PlatformStand = true
-
-									pcall(function()
-										tbl11.SetNetworkOwner:FireServer(targetRoot, lockPos)
-										tbl11.DestroyGrabLine:FireServer(targetRoot)
-									end)
-
-									if checkStartTime > 0 and tick() - checkStartTime > 0.30 then
-										if (targetRoot.Position - lockPos.Position).Magnitude > 10 then
-											dragging, grabStartTime, checkStartTime = false, 0, 0
-											cleanupBodies()
-											myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
-										else
-											checkStartTime = tick()
+											lastGrab = now
 										end
 									end
 								end
 							else
-								dragging, grabStartTime, checkStartTime = false, 0, 0
-								cleanupBodies()
-							end
-							RunService.RenderStepped:Wait()
-						end
-						cleanupBodies()
-						if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
-							localPlayer.Character.HumanoidRootPart.CFrame = savedPos
-						end
-					end
-
-					-- ==========================================
-					-- 3. BLOB KICK (Auto-Sit)
-					-- ==========================================
-					tbl12.InfinityKick = function(playerName)
-						local s = tbl7.InfinityState
-						local targetPlayer = Players:FindFirstChild(playerName)
-						if not targetPlayer then return end
-
-						local myChar = localPlayer.Character
-						local myHum = myChar and myChar:FindFirstChild("Humanoid")
-						if not myHum then return end
-
-						local seat = myHum.SeatPart
-						if not seat or seat.Parent.Name ~= "CreatureBlobman" then
-							fn18("Auto-spawning Blobman...", "Blob Kick")
-							local toys = workspace:FindFirstChild(localPlayer.Name .. "SpawnedInToys")
-							local blob = toys and toys:FindFirstChild("CreatureBlobman")
-							
-							if not blob then
-								local spawnToy = ReplicatedStorage:FindFirstChild("MenuToys") and ReplicatedStorage.MenuToys:FindFirstChild("SpawnToyRemoteFunction")
-								if spawnToy then
-									pcall(function() spawnToy:InvokeServer("CreatureBlobman", myChar.HumanoidRootPart.CFrame * CFrame.new(0, 5, 5), Vector3.zero) end)
-								end
-								local t0 = tick()
-								repeat
-									task.wait(0.1)
-									toys = workspace:FindFirstChild(localPlayer.Name .. "SpawnedInToys")
-									blob = toys and toys:FindFirstChild("CreatureBlobman")
-								until blob or tick() - t0 > 3 or not s.Active
-							end
-							
-							if blob then
-								local vSeat = blob:WaitForChild("VehicleSeat", 2)
-								if vSeat then
-									local root = myChar:FindFirstChild("HumanoidRootPart")
-									if root then root.CFrame = vSeat.CFrame + Vector3.new(0, 1, 0) end
-									local t1 = tick()
-									repeat
-										vSeat:Sit(myHum)
-										RunService.Heartbeat:Wait()
-									until myHum.SeatPart == vSeat or tick() - t1 > 1.5 or not s.Active
-									if myHum.SeatPart == vSeat then seat = vSeat end
-								end
-							end
-							if not seat then
-								fn18("Failed to sit on Blobman", "Blob Kick")
-								s.Active = false
-								if toggles.InfinityKickToggle then toggles.InfinityKickToggle:SetValue(false) end
-								return
-							end
-						end
-
-						local blob = seat.Parent
-						local blobRoot = blob and (blob:FindFirstChild("HumanoidRootPart") or blob.PrimaryPart)
-						local scriptObj = blob and blob:FindFirstChild("BlobmanSeatAndOwnerScript")
-						local CG = scriptObj and scriptObj:FindFirstChild("CreatureGrab")
-						local CD = scriptObj and (scriptObj:FindFirstChild("CreatureRelease") or scriptObj:FindFirstChild("CreatureDrop"))
-						local L_Det = blob and blob:FindFirstChild("LeftDetector")
-						local L_Weld = L_Det and L_Det:FindFirstChild("LeftWeld")
-						
-						if not (blobRoot and CG and CD and L_Det and L_Weld) then
-							fn18("Blobman components missing", "Blob Kick")
-							s.Active = false
-							if toggles.InfinityKickToggle then toggles.InfinityKickToggle:SetValue(false) end
-							return
-						end
-
-						local SavedPos = blobRoot.CFrame
-						while s.Active do
-							local target = Players:FindFirstChild(playerName)
-							if not target or not target.Character then RunService.Heartbeat:Wait() continue end
-							
-							local tRoot = target.Character:FindFirstChild("HumanoidRootPart")
-							local tHum = target.Character:FindFirstChild("Humanoid")
-							
-							if tRoot and tHum and tHum.Health > 0 then
-								pcall(function()
-									blobRoot.CFrame = tRoot.CFrame
-									CG:FireServer(L_Det, tRoot, L_Weld)
-									task.wait(0.05)
-									CD:FireServer(L_Weld, tRoot)
-									
-									local lockPos = SavedPos * CFrame.new(0, 23, 0)
-									tRoot.CFrame = lockPos
-									tRoot.AssemblyLinearVelocity = Vector3.zero
-									
-									tbl11.SetNetworkOwner:FireServer(tRoot, lockPos)
-									tbl11.DestroyGrabLine:FireServer(tRoot)
-								end)
-								task.wait(0.05)
-								blobRoot.CFrame = SavedPos
+								cleanup()
+								task.wait(0.5)
 							end
 							RunService.Heartbeat:Wait()
 						end
-						blobRoot.CFrame = SavedPos
+						cleanup()
 					end
 
 					-- ==========================================
-					-- 4. DESYNC KICK (Разрыв сети)
+					-- 2. DESYNC KICK (Разрыв сети)
 					-- ==========================================
 					tbl12.DesyncKick = function(playerName)
-						local s = tbl7.DesyncState
+						local s = tbl7.DesyncKickState
 						local targetPlayer = Players:FindFirstChild(playerName)
 						if not targetPlayer then return end
+						
+						local savedPos = nil
 
 						while s.Active do
 							local target = Players:FindFirstChild(playerName)
-							if not target or not target.Parent then break end
-							local targetRoot = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+							if not target or not target.Character then break end
+							
+							local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
 							
 							if targetRoot then
+								if not savedPos then
+									savedPos = targetRoot.CFrame
+								end
+
 								pcall(function()
-									tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
-									targetRoot.CFrame = CFrame.new(targetRoot.Position.X, 10000, targetRoot.Position.Z)
-									task.wait()
-									if targetRoot.Parent then
-										targetRoot.CFrame = CFrame.new(targetRoot.Position.X, -10000, targetRoot.Position.Z)
+									if tbl11.SetNetworkOwner then
+										tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
 									end
-									tbl11.DestroyGrabLine:FireServer(targetRoot)
+									
+									-- Кидаем вверх
+									targetRoot.CFrame = CFrame.new(targetRoot.Position.X, 10000, targetRoot.Position.Z)
+									targetRoot.AssemblyLinearVelocity = Vector3.new(0, 9999, 0)
 								end)
+								
+								task.wait() -- 1 кадр
+								
+								if targetRoot.Parent then
+									pcall(function()
+										-- Кидаем вниз
+										targetRoot.CFrame = CFrame.new(targetRoot.Position.X, -10000, targetRoot.Position.Z)
+										targetRoot.AssemblyLinearVelocity = Vector3.new(0, -9999, 0)
+									end)
+								end
 							end
 							RunService.Heartbeat:Wait()
 						end
-					end
-
-					-- ==========================================
-					-- 5. VOID PCLD (Убийство детектора)
-					-- ==========================================
-					tbl12.VoidPCLD = function(playerName)
-						local s = tbl7.VoidPCLDState
-						while s.Active do
-							local target = Players:FindFirstChild(playerName)
-							if not target or not target.Parent then break end
-							local pcld = tbl12.DetectPCLD(target)
-							
-							if pcld then
+						
+						local finalTarget = Players:FindFirstChild(playerName)
+						if finalTarget and finalTarget.Character and savedPos then
+							local finalRoot = finalTarget.Character:FindFirstChild("HumanoidRootPart")
+							if finalRoot then
 								pcall(function()
-									tbl11.SetNetworkOwner:FireServer(pcld, pcld.CFrame)
-									pcld.CFrame = CFrame.new(99999, -99999, 99999)
-									pcld.AssemblyLinearVelocity = Vector3.new(99999, -99999, 99999)
+									finalRoot.CFrame = savedPos
 								end)
 							end
-							RunService.Heartbeat:Wait()
-						end
-					end
-
-					-- ==========================================
-					-- 6. LINE KICK (Перегрузка пакетами)
-					-- ==========================================
-					tbl12.LineKick = function(playerName)
-						local s = tbl7.LineKickState
-						local junk = string.rep("A", 50000)
-						while s.Active do
-							local target = Players:FindFirstChild(playerName)
-							if not target or not target.Parent then break end
-							local targetRoot = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
-							
-							if targetRoot then
-								pcall(function()
-									if tbl11.Packet then tbl11.Packet:FireServer(junk) end
-									tbl11.SetNetworkOwner:FireServer(targetRoot, targetRoot.CFrame)
-									targetRoot.CFrame = targetRoot.CFrame + Vector3.new(math.random(-10, 10), 500, math.random(-10, 10))
-									tbl11.DestroyGrabLine:FireServer(targetRoot)
-								end)
-							end
-							RunService.Heartbeat:Wait()
 						end
 					end
 	
