@@ -372,13 +372,11 @@ RunService.Heartbeat:Connect(function()
     if G("lineLag") then
         local ge = GetGrabEvents(); if not ge then return end
         local root = GetRoot(LocalPlayer); if not root then return end
-        for i = 1, 20 do
-            pcall(function()
-                if ge.CreateGrabLine then ge.CreateGrabLine:FireServer(root, Vector3.zero, root.Position, false) end
-                if ge.DestroyGrabLine then ge.DestroyGrabLine:FireServer(root) end
-                if ge.ExtendGrabLine then ge.ExtendGrabLine:FireServer(root) end
-            end)
-        end
+        -- throttled to avoid remote queue exhaustion
+        pcall(function()
+            if ge.CreateGrabLine then ge.CreateGrabLine:FireServer(root, Vector3.zero, root.Position, false) end
+            if ge.DestroyGrabLine then ge.DestroyGrabLine:FireServer(root) end
+        end)
     end
     if G("packetSpam") then
         local big = string.rep("A", 50000)
@@ -492,9 +490,9 @@ local tabSet = window:Tab({Text = "Settings"})
 -- Main
 local sMove = tabMain:Section({Text = "Movement", Side = "Left"})
 sMove:Toggle({Text = "Speed", Flag = "Speed", Callback = function(v) R("speed", v) end})
-sMove:Slider({Text = "WalkSpeed", Flag = "WalkSpeed", Min = 16, Max = 300, Default = 16, Callback = function(v) R("walkSpeed", v) end})
+sMove:Slider({Text = "WalkSpeed", Flag = "WalkSpeed", Minimum = 16, Maximum = 300, Default = 16, Callback = function(v) R("walkSpeed", v) end})
 sMove:Toggle({Text = "Fly", Flag = "Fly", Callback = function(v) R("fly", v) end})
-sMove:Slider({Text = "Fly Speed", Flag = "FlySpeed", Min = 20, Max = 400, Default = 60, Callback = function(v) R("flySpeed", v) end})
+sMove:Slider({Text = "Fly Speed", Flag = "FlySpeed", Minimum = 20, Maximum = 400, Default = 60, Callback = function(v) R("flySpeed", v) end})
 sMove:Toggle({Text = "Noclip", Flag = "Noclip", Callback = function(v) R("noclip", v) end})
 sMove:Toggle({Text = "Anti-Void", Flag = "AntiVoid", Callback = function(v) R("antiVoid", v) end})
 sMove:Toggle({Text = "Anti-Grab", Flag = "AntiGrab", Callback = function(v) R("antiGrab", v) end})
@@ -510,7 +508,7 @@ end})
 sFling:Toggle({Text = "Kick (hold)", Flag = "Kick", Callback = function(v)
     R("kick", v); if v then task.spawn(function() KickLoop(targetName) end) end
 end})
-sFling:Slider({Text = "Kick Height", Flag = "KickHeight", Min = 5, Max = 100, Default = 22, Callback = function(v) R("kickHeight", v) end})
+sFling:Slider({Text = "Kick Height", Flag = "KickHeight", Minimum = 5, Maximum = 100, Default = 22, Callback = function(v) R("kickHeight", v) end})
 sFling:Toggle({Text = "Loop Kill", Flag = "LoopKill", Callback = function(v)
     R("loopKill", v); if v then task.spawn(function() LoopKill(targetName) end) end
 end})
@@ -531,7 +529,7 @@ sFling:Button({Text = "Teleport to Target", Callback = function() TeleportTo(tar
 local sVis = tabVis:Section({Text = "Visuals", Side = "Left"})
 sVis:Toggle({Text = "ESP", Flag = "ESP", Callback = function(v) R("espOn", v) end})
 sVis:Toggle({Text = "FullBright", Flag = "FullBright", Callback = function(v) R("fullBright", v) end})
-sVis:Slider({Text = "FOV", Flag = "FOV", Min = 50, Max = 120, Default = 70, Callback = function(v) R("fov", v) end})
+sVis:Slider({Text = "FOV", Flag = "FOV", Minimum = 50, Maximum = 120, Default = 70, Callback = function(v) R("fov", v) end})
 
 -- Fun
 local sFun = tabFun:Section({Text = "Fun", Side = "Left"})
