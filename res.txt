@@ -37268,7 +37268,6 @@ Escape Timer: %*]]
 				tbl7.TargetMethods = targetMethods
 			end,
 		})
-	end
 
 
 		local v21 = v20:AddDependencyBox()
