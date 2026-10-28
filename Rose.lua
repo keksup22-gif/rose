@@ -3875,6 +3875,7 @@ local Tabs = {
 	Visual = Window:AddTab("Visual", "eye"),
 	Server = Window:AddTab("Server", "server"),
 	Fun = Window:AddTab("Fun", "gamepad-2"),
+	Custom = Window:AddTab("Custom", "sparkles"),
 	Keybind = Window:AddTab("Keybind", "keyboard"),
 	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
 }
@@ -6794,6 +6795,60 @@ do
 			end
 		end,
 	})
+end
+
+do
+	-- Custom tab (from Endoris + Vovange)
+	local kunaiGui = nil
+	local kunaiLabel = nil
+	local function ensureKunaiGui()
+		if kunaiGui then return end
+		kunaiGui = Instance.new("ScreenGui")
+		kunaiGui.Name = "KunaiMessageGui"
+		kunaiGui.ResetOnSpawn = false
+		kunaiGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+		kunaiLabel = Instance.new("TextLabel")
+		kunaiLabel.Size = UDim2.new(0, 480, 0, 38)
+		kunaiLabel.Position = UDim2.new(0, 16, 1, -60)
+		kunaiLabel.AnchorPoint = Vector2.new(0, 1)
+		kunaiLabel.BackgroundTransparency = 1
+		kunaiLabel.TextColor3 = Color3.fromRGB(255, 240, 120)
+		kunaiLabel.Font = Enum.Font.Code
+		kunaiLabel.TextSize = 18
+		kunaiLabel.TextXAlignment = Enum.TextXAlignment.Left
+		kunaiLabel.TextTransparency = 1
+		kunaiLabel.RichText = true
+		kunaiLabel.Parent = kunaiGui
+	end
+	local function typeKunaiMessage(msg, charDelay)
+		charDelay = charDelay or 0.038
+		ensureKunaiGui()
+		kunaiLabel.Text = ""
+		local tw = TweenService:Create(kunaiLabel, TweenInfo.new(0.3, Enum.EasingStyle.Linear), { TextTransparency = 0 })
+		tw:Play()
+		task.spawn(function()
+			for i = 1, #msg do
+				kunaiLabel.Text = msg:sub(1, i)
+				task.wait(charDelay)
+			end
+			task.wait(2.5)
+			TweenService:Create(kunaiLabel, TweenInfo.new(0.6, Enum.EasingStyle.Linear), { TextTransparency = 1 }):Play()
+		end)
+	end
+
+	local customBox = Tabs.Custom:AddGroupbox({ Side = "Left", Name = "Kunai Message (Endoris)" })
+	customBox:AddTextbox("KunaiMsg", { Default = "Hello from Rose!", Text = "Message", Placeholder = "Type message..." })
+	customBox:AddButton({ Text = "Show Kunai Message", Func = function()
+		local msg = Options.KunaiMsg and Options.KunaiMsg.Value or "Hello from Rose!"
+		typeKunaiMessage(msg, 0.038)
+	end })
+
+	local assetBox = Tabs.Custom:AddGroupbox({ Side = "Right", Name = "Custom Assets (Vovange)" })
+	assetBox:AddLabel("Helpers: safeGetCustomAsset, safeMakeFolder")
+	assetBox:AddButton({ Text = "Make folder 'RoseAssets'", Func = function()
+		if makefolder and not isfolder("RoseAssets") then makefolder("RoseAssets") end
+		Library:Notify({ Title = "Rose", Description = "Folder ready", Time = 2 })
+	end })
 end
 
 do
