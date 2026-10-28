@@ -41207,83 +41207,178 @@ Escape Timer: %*]]
 					end
 
 										-- ==========================================
-					-- 1. ERIS KICK (Удержание + Скорость)
-					-- ==========================================
 					tbl12.ErisKick = function(playerName)
 						local s = tbl7.ErisKick
 						local targetPlayer = Players:FindFirstChild(playerName)
 						if not targetPlayer then return end
 
-						local lastGrab = 0
-						local bp, bg
+						local dragging = false
+						local savedPos = nil
+						local myPos = nil
 
-						local function cleanup()
-							pcall(function()
-								if bp then bp:Destroy() bp = nil end
-								if bg then bg:Destroy() bg = nil end
-							end)
+						local function zeroVelocity(part)
+							if part then
+								part.Velocity = Vector3.new(0, 0, 0)
+								part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+								part.RotVelocity = Vector3.new(0, 0, 0)
+								part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+							end
 						end
 
-						while s.Active do
-							local target = Players:FindFirstChild(playerName)
-							if not target or not target.Parent then break end
+						local function applyGyro(character)
+							if not character then return end
+							local hrp = character:FindFirstChild("HumanoidRootPart")
+							if not hrp then return end
+							
+							local gyro = hrp:FindFirstChild("KickHoldGyro")
+							if not gyro then
+								gyro = Instance.new("BodyGyro")
+								gyro.Name = "KickHoldGyro"
+								gyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+								gyro.P = 50000
+								gyro.D = 100
+								gyro.Parent = hrp
+							end
+							gyro.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(1, 0, 0))
+						end
 
-							local character = localPlayer.Character
-							local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-							local targetCharacter = target.Character
-							local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
+						local function applyBody(hrp, position, lookVector)
+							if not hrp then return end
+							
+							local bp = hrp:FindFirstChild("KickHoldBP")
+							if not bp then
+								bp = Instance.new("BodyPosition")
+								bp.Name = "KickHoldBP"
+								bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+								bp.P = 50000
+								bp.D = 100
+								bp.Parent = hrp
+							end
+							bp.Position = position
+							
+							local bg = hrp:FindFirstChild("KickHoldBG")
+							if not bg then
+								bg = Instance.new("BodyGyro")
+								bg.Name = "KickHoldBG"
+								bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+								bg.P = 50000
+								bg.D = 100
+								bg.Parent = hrp
+							end
+							bg.CFrame = CFrame.new(hrp.Position, hrp.Position + lookVector)
+						end
 
-							if targetCharacter and targetHumanoid and targetHumanoid.Health > 0 then
-								local targetRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
-								if character and rootPart and targetRootPart then
-									local dist = (targetRootPart.Position - rootPart.Position).Magnitude
-									if dist > 30 then
-										pcall(function()
-											character:PivotTo(targetRootPart.CFrame * CFrame.new(0, 2, 4))
-										end)
-									else
-										local kickPosition = (rootPart.CFrame * CFrame.new(0, tbl9.ErisKickHeight or 22, 0)).Position
+						-- Поток 1: Логика удержания (Позиция)
+						local posTask = task.spawn(function()
+							while s.Active do
+								local target = Players:FindFirstChild(playerName)
+								if not target or not target.Parent then break end
 
-										if not bp or not bp.Parent then
-											bp = Instance.new("BodyPosition")
-											bp.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-											bp.P = 40000000
-											bp.Position = kickPosition
-											bp.Parent = targetRootPart
+								local character = localPlayer.Character
+								local root = character and character:FindFirstChild("HumanoidRootPart")
+								
+								if root then
+									local tChar = target.Character
+									local tHum = tChar and tChar:FindFirstChild("Humanoid")
+									local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
 
-											bg = Instance.new("BodyGyro")
-											bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-											bg.P = 3000
-											bg.CFrame = CFrame.new(kickPosition)
-											bg.Parent = targetRootPart
-										end
-
-										pcall(function()
-											bp.Position = kickPosition
-											bg.CFrame = CFrame.new(kickPosition)
-											targetHumanoid.PlatformStand = true
-											-- Жесткая скорость из Sunapse для срабатывания античита
-											targetRootPart.AssemblyLinearVelocity = Vector3.new(0, 300, 0)
-										end)
-
-										-- Спам только SetNetworkOwner, без линий (чтобы не крашить)
-										local now = tick()
-										if now - lastGrab > 0.05 then
-											if tbl11.SetNetworkOwner then
-												tbl11.SetNetworkOwner:FireServer(targetRootPart, targetRootPart.CFrame)
-												tbl11.SetNetworkOwner:FireServer(targetRootPart, targetRootPart.CFrame)
+									if tChar and tHum and tHum.Health > 0 and tRoot then
+										applyGyro(tChar)
+										
+										local hasOwner = false
+										for _, v in ipairs(tChar:GetDescendants()) do
+											if v.Name == "PartOwner" and v:IsA("StringValue") and v.Value == localPlayer.Name then
+												hasOwner = true
+												break
 											end
-											lastGrab = now
 										end
+
+										if hasOwner then
+											if dragging then
+												dragging = false
+												if savedPos then
+													root.CFrame = savedPos
+													zeroVelocity(root)
+													savedPos = nil
+													myPos = nil
+												end
+											end
+										elseif (tRoot.Position - (dragging and savedPos and savedPos.Position or root.Position)).Magnitude > 30 then
+											if not dragging then
+												dragging = true
+												savedPos = root.CFrame
+												myPos = root.CFrame
+											end
+											-- Телепорт под цель (из Mercury)
+											root.CFrame = CFrame.new(tRoot.Position) * CFrame.new(0, -15, 0)
+											zeroVelocity(root)
+										elseif dragging then
+											dragging = false
+											if savedPos then
+												root.CFrame = savedPos
+												zeroVelocity(root)
+												savedPos = nil
+												myPos = nil
+											end
+										end
+
+										local targetPos = (dragging and savedPos and savedPos.Position or root.Position) + Vector3.new(0, 20, 0)
+										applyBody(tRoot, targetPos, root.CFrame.LookVector)
 									end
 								end
-							else
-								cleanup()
-								task.wait(0.5)
+								RunService.Heartbeat:Wait()
 							end
-							RunService.Heartbeat:Wait()
-						end
-						cleanup()
+						end)
+
+						-- Поток 2: Спам сети (SNO + DestroyLine)
+						local netTask = task.spawn(function()
+							while s.Active do
+								local target = Players:FindFirstChild(playerName)
+								if target and target.Character then
+									local tRoot = target.Character:FindFirstChild("HumanoidRootPart")
+									if tRoot then
+										pcall(function()
+											if tbl11.SetNetworkOwner then
+												tbl11.SetNetworkOwner:FireServer(tRoot, tRoot.CFrame)
+											end
+											if tbl11.DestroyGrabLine then
+												tbl11.DestroyGrabLine:FireServer(tRoot)
+											end
+										end)
+									end
+								end
+								RunService.Heartbeat:Wait()
+							end
+						end)
+
+						-- Ожидаем завершения обоих потоков при выключении
+						task.spawn(function()
+							while s.Active do
+								task.wait(0.1)
+							end
+							pcall(task.cancel, posTask)
+							pcall(task.cancel, netTask)
+							
+							-- Очистка
+							local target = Players:FindFirstChild(playerName)
+							if target and target.Character then
+								local tRoot = target.Character:FindFirstChild("HumanoidRootPart")
+								if tRoot then
+									local bp = tRoot:FindFirstChild("KickHoldBP")
+									if bp then bp:Destroy() end
+									local bg = tRoot:FindFirstChild("KickHoldBG")
+									if bg then bg:Destroy() end
+									local gyro = tRoot:FindFirstChild("KickHoldGyro")
+									if gyro then gyro:Destroy() end
+								end
+							end
+							
+							local myChar = localPlayer.Character
+							local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+							if myRoot and savedPos then
+								myRoot.CFrame = savedPos
+							end
+						end)
 					end
 
 					-- ==========================================
