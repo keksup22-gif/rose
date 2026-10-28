@@ -37271,25 +37271,6 @@ Escape Timer: %*]]
 	end
 
 
-		v20:AddDropdown("MethodSettingsTargets", {
-			Values = {
-				"Kick",
-				"Void",
-				"Kill",
-				"Bring",
-				"Destroy Food",
-				"Remove Gucci",
-				"Remove Invisibility",
-				"Delete Seatables",
-			},
-			Multi = true,
-			AllowNull = true,
-			Text = "Methods",
-			Callback = function(targetMethods)
-				tbl7.TargetMethods = targetMethods
-			end,
-		})
-
 		local v21 = v20:AddDependencyBox()
 		v21:SetupDependencies({ { options.MethodSettingsTargets, "Kick" } })
 		v21:AddDivider("Kick Settings")
