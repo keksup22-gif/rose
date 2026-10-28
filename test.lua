@@ -1,0 +1,8 @@
+print("[Rose test] hello world")
+print("[Rose test] library check:")
+print(type(library))
+local ok, err = pcall(function()
+    local L = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))
+    print("obsidian loadstring type:", type(L))
+end)
+print("pcall ok:", ok, err)
