@@ -6758,6 +6758,58 @@ do
 	})
 
 	-- Typing Sound (XOCU)
+	-- Cosmetics (XOCU)
+	local cosBox = Tabs.Visual:AddGroupbox({ Side = "Left", Name = "Cosmetics (XOCU)" })
+	cosBox:AddToggle("Hat", {
+		Text = "Chinese Hat",
+		Default = false,
+		Callback = function(enabled)
+			local char = LocalPlayer.Character; if not char then return end
+			local head = char:FindFirstChild("Head"); if not head then return end
+			if enabled then
+				local hat = Instance.new("Part"); hat.Name = "RoseHat"; hat.Transparency = 0.3; hat.Color = Color3.fromRGB(0, 255, 255); hat.Material = Enum.Material.Neon; hat.CanCollide = false; hat.CanTouch = false; hat.CanQuery = false; hat.Massless = true
+				local m = Instance.new("SpecialMesh"); m.MeshId = "rbxassetid://1033714"; m.Scale = Vector3.new(2.4, 1.6, 2.4); m.Parent = hat
+				local w = Instance.new("WeldConstraint"); w.Part0 = head; w.Part1 = hat; w.Parent = hat
+				hat.CFrame = head.CFrame * CFrame.new(0, 1.1, 0); hat.Parent = char
+			else
+				local hat = char:FindFirstChild("RoseHat"); if hat then hat:Destroy() end
+			end
+		end,
+	})
+	cosBox:AddToggle("Trail", {
+		Text = "Trail",
+		Default = false,
+		Callback = function(enabled)
+			local char = LocalPlayer.Character; if not char then return end
+			local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
+			if enabled then
+				local a0 = Instance.new("Attachment"); a0.Name = "RoseTrail0"; a0.Position = Vector3.new(0, 2, 0); a0.Parent = hrp
+				local a1 = Instance.new("Attachment"); a1.Name = "RoseTrail1"; a1.Position = Vector3.new(0, -2, 0); a1.Parent = hrp
+				local tr = Instance.new("Trail"); tr.Attachment0 = a0; tr.Attachment1 = a1; tr.Lifetime = 0.5; tr.LightEmission = 0.2; tr.Enabled = true; tr.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }); tr.Color = ColorSequence.new(Color3.fromRGB(0, 255, 255)); tr.Parent = char
+			else
+				local tr = char:FindFirstChildOfClass("Trail"); if tr then tr:Destroy() end
+				local a0 = hrp:FindFirstChild("RoseTrail0"); if a0 then a0:Destroy() end
+				local a1 = hrp:FindFirstChild("RoseTrail1"); if a1 then a1:Destroy() end
+			end
+		end,
+	})
+	cosBox:AddToggle("ForceField", {
+		Text = "ForceField Skin",
+		Default = false,
+		Callback = function(enabled)
+			local char = LocalPlayer.Character; if not char then return end
+			if enabled then
+				for _, p in ipairs(char:GetDescendants()) do
+					if p:IsA("BasePart") and p.Name ~= "RoseHat" then p.Color = Color3.fromRGB(128, 128, 128); p.Material = Enum.Material.ForceField end
+				end
+			else
+				for _, p in ipairs(char:GetDescendants()) do
+					if p:IsA("BasePart") and p.Name ~= "RoseHat" then p.Material = Enum.Material.SmoothPlastic end
+				end
+			end
+		end,
+	})
+
 	local typingBox = Tabs.Visual:AddGroupbox({ Side = "Right", Name = "Typing Sound (XOCU)" })
 	local typingSound = Instance.new("Sound")
 	typingSound.SoundId = "rbxassetid://9116149587"
