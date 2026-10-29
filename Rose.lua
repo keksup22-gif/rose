@@ -5857,6 +5857,107 @@ do
 	})
 
 	kickBox:AddButton({
+		Text = "Fling (XOCU)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local root = target.Character:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+			local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			pcall(function()
+				if so then so:FireServer(root, root.CFrame) end
+				if dg then dg:FireServer(root) end
+				local away = myRoot and (root.Position - myRoot.Position).Unit or Vector3.new(0,0,1)
+				away = Vector3.new(away.X, 0, away.Z) * 90000
+				local bv = Instance.new("BodyVelocity")
+				bv.Name = "RinneganFling"
+				bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+				bv.Velocity = away
+				bv.P = 12500
+				bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			end)
+			Library:Notify({ Title = "Rose", Description = "Flung " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
+		Text = "Kill (XOCU)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local root = target.Character:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+			local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			pcall(function()
+				if so then so:FireServer(root, root.CFrame) end
+				if dg then dg:FireServer(root) end
+				local away = myRoot and (root.Position - myRoot.Position).Unit or Vector3.new(0,0,1)
+				away = Vector3.new(away.X, 0, away.Z) * 99999999999999
+				local bv = Instance.new("BodyVelocity")
+				bv.Name = "RinneganFling"
+				bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+				bv.Velocity = away
+				bv.P = 12500
+				bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			end)
+			Library:Notify({ Title = "Rose", Description = "Killed " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
+		Text = "Send to Heaven (XOCU)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local root = target.Character:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			pcall(function()
+				if so then so:FireServer(root, root.CFrame) end
+				if dg then dg:FireServer(root) end
+				root.CFrame = CFrame.new(0, 200, 0)
+				local bv = Instance.new("BodyVelocity")
+				bv.Name = "RinneganHeaven"
+				bv.MaxForce = Vector3.new(0, math.huge, 0)
+				bv.Velocity = Vector3.new(0, 200, 0)
+				bv.P = 12500
+				bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			end)
+			Library:Notify({ Title = "Rose", Description = "Sent " .. target.Name .. " to heaven", Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
+		Text = "GrabLine Spam (XOCU)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local th = target.Character:FindFirstChild("Head")
+			local tr = target.Character:FindFirstChild("HumanoidRootPart")
+			if not (th and tr) then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local cg = ge and ge:FindFirstChild("CreateGrabLine")
+			if not cg then Library:Notify({ Title = "Rose", Description = "CreateGrabLine not found", Time = 2 }); return end
+			for i = 1, 10 do
+				pcall(function() cg:FireServer(th, th.CFrame) end)
+				pcall(function() cg:FireServer(tr, tr.CFrame) end)
+			end
+			Library:Notify({ Title = "Rose", Description = "GrabLine spam sent", Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
 		Text = "Destroy Server",
 		Func = function()
 			task.spawn(function()
