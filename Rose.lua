@@ -6210,10 +6210,29 @@ do
 				local ok = pcall(function() dg:FireServer(tr) end)
 				print("[Rose Debug] DestroyGrabLine ok: " .. tostring(ok))
 			end
+			-- Create AlignPosition (like Sunapse) to hold target
+			if not tr:FindFirstChild("RoseAlign") then
+				for _, ch in pairs(tr:GetChildren()) do
+					if (ch:IsA("BodyPosition") or ch:IsA("BodyGyro") or ch:IsA("AlignPosition") or ch:IsA("AlignOrientation")) and ch.Name ~= "RoseAlign" and ch.Name ~= "RoseRot" then
+						pcall(function() ch:Destroy() end)
+					end
+				end
+				local att = Instance.new("Attachment", tr); att.Name = "RoseAtt0"
+				local aatt = Instance.new("Attachment", workspace.Terrain); aatt.Name = "RoseAtt1"
+				local ap = Instance.new("AlignPosition"); ap.Name = "RoseAlign"; ap.Attachment0 = att; ap.Attachment1 = aatt
+				ap.MaxForce = math.huge; ap.Responsiveness = 300; ap.Parent = tr
+				local ao = Instance.new("AlignOrientation"); ao.Name = "RoseRot"; ao.Attachment0 = att; ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+				ao.MaxTorque = math.huge; ao.Responsiveness = 300; ao.Parent = tr
+			end
+			local ra = tr:FindFirstChild("RoseAlign")
+			local kickPos = (LocalPlayer.Character:FindFirstChild("HumanoidRootPart").CFrame * CFrame.new(0, 20, 0)).Position
+			if ra and ra.Attachment1 then ra.Attachment1.WorldPosition = kickPos end
+			local rr = tr:FindFirstChild("RoseRot"); if rr then rr.CFrame = CFrame.Angles(0, 0, 0) end
 			pcall(function()
 				th.PlatformStand = true
-				tr.AssemblyLinearVelocity = Vector3.new(0, 200, 0)
-				print("[Rose Debug] Velocity applied")
+				tr.AssemblyLinearVelocity = Vector3.zero
+				tr.AssemblyAngularVelocity = Vector3.zero
+				print("[Rose Debug] Align + PlatformStand applied")
 			end)
 			Library:Notify({ Title = "Rose Debug", Description = "Check console (F9)", Time = 3 })
 		end,
