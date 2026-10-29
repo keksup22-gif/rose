@@ -130,7 +130,9 @@ State.runtime.autoSit = false
 State.runtime.traceOn = false
 State.runtime.espOn = false
 State.runtime.gucciAntiGrab = false
+State.runtime.antiBlobmanAura = false
 State.runtime.shurikenMinefield = false
+State.runtime.antiBlobmanAura = false
 State.runtime.autoAttacker = false
 State.runtime.pktNotify = true
 State.runtime.pktCooldown = false
@@ -5238,6 +5240,44 @@ do
 		end,
 	})
 
+	safetyBox:AddToggle("AntiBlobmanAura", {
+		Text = "Anti-Blobman Aura (XOCU)",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.antiBlobmanAura = enabled
+			if enabled then
+				if State.runtime.antiBlobmanAuraConn then State.runtime.antiBlobmanAuraConn:Disconnect() end
+				State.runtime.antiBlobmanAuraConn = RunService.Heartbeat:Connect(function()
+					if not State.runtime.antiBlobmanAura then return end
+					local myChar = LocalPlayer.Character
+					local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+					if not myRoot then return end
+					for _, plr in ipairs(Players:GetPlayers()) do
+						if plr ~= LocalPlayer then
+							local pChar = plr.Character
+							local pRoot = pChar and pChar:FindFirstChild("HumanoidRootPart")
+							local pHum = pChar and pChar:FindFirstChildOfClass("Humanoid")
+							if pRoot and pHum and pHum.SeatPart then
+								local seatParent = pHum.SeatPart.Parent
+								if seatParent and seatParent.Name == "CreatureBlobman" then
+									if (pRoot.Position - myRoot.Position).Magnitude <= 19 then
+										local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+										local so = ge and ge:FindFirstChild("SetNetworkOwner")
+										if so then pcall(function() so:FireServer(pRoot, pRoot.CFrame) end) end
+									end
+								end
+							end
+						end
+					end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Anti-Blobman Aura ON", Time = 2 })
+			else
+				if State.runtime.antiBlobmanAuraConn then State.runtime.antiBlobmanAuraConn:Disconnect(); State.runtime.antiBlobmanAuraConn = nil end
+				Library:Notify({ Title = "Rose", Description = "Anti-Blobman Aura OFF", Time = 2 })
+			end
+		end,
+	})
+
 	safetyBox:AddToggle("AntiBlobman", {
 		Text = "Anti Blobman",
 		Default = false,
@@ -6464,6 +6504,124 @@ do
 			else
 				if hellAuraConn then hellAuraConn:Disconnect(); hellAuraConn = nil end
 				Library:Notify({ Title = "Rose", Description = "Hell Send Aura OFF", Time = 2 })
+			end
+		end,
+	})
+
+	local grabModsBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Grab Mods (XOCU)" })
+	local killGrabEnabled = false
+	local killGrabConn = nil
+	grabModsBox:AddToggle("KillGrab", {
+		Text = "Kill Grab",
+		Default = false,
+		Callback = function(enabled)
+			killGrabEnabled = enabled
+			if enabled then
+				if killGrabConn then killGrabConn:Disconnect() end
+				killGrabConn = workspace.ChildAdded:Connect(function(v)
+					if not killGrabEnabled then return end
+					if v:IsA("Model") and v.Name == "GrabParts" then
+						task.wait(0.05)
+						local gp = v:FindFirstChild("GrabPart")
+						local weld = gp and gp:FindFirstChildOfClass("WeldConstraint")
+						local part1 = weld and weld.Part1
+						if part1 and part1.Parent and part1.Parent ~= LocalPlayer.Character then
+							local targetChar = part1.Parent
+							local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
+							if targetHum then
+								pcall(function() targetHum.Health = 0; targetChar:BreakJoints() end)
+							end
+						end
+					end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Kill Grab ON", Time = 2 })
+			else
+				if killGrabConn then killGrabConn:Disconnect(); killGrabConn = nil end
+				Library:Notify({ Title = "Rose", Description = "Kill Grab OFF", Time = 2 })
+			end
+		end,
+	})
+
+	local massLessEnabled = false
+	local massLessConn = nil
+	grabModsBox:AddToggle("MassLessGrab", {
+		Text = "MassLess Grab",
+		Default = false,
+		Callback = function(enabled)
+			massLessEnabled = enabled
+			if enabled then
+				if massLessConn then massLessConn:Disconnect() end
+				massLessConn = RunService.Heartbeat:Connect(function()
+					if not massLessEnabled then return end
+					local gp = workspace:FindFirstChild("GrabParts")
+					if not gp then return end
+					local dp = gp:FindFirstChild("DragPart")
+					if not dp then return end
+					local ap = dp:FindFirstChild("AlignPosition")
+					local ao = dp:FindFirstChild("AlignOrientation")
+					if ap then ap.Responsiveness = 200; ap.MaxForce = math.huge; ap.MaxVelocity = math.huge end
+					if ao then ao.Responsiveness = 200; ao.MaxTorque = math.huge end
+				end)
+				Library:Notify({ Title = "Rose", Description = "MassLess Grab ON", Time = 2 })
+			else
+				if massLessConn then massLessConn:Disconnect(); massLessConn = nil end
+				Library:Notify({ Title = "Rose", Description = "MassLess Grab OFF", Time = 2 })
+			end
+		end,
+	})
+
+	grabModsBox:AddSlider("MassLessSense", {
+		Text = "MassLess Sense",
+		Default = 200,
+		Min = 50,
+		Max = 1000,
+		Rounding = 0,
+		Callback = function(v)
+			-- stored for reference; MassLess uses fixed 200
+		end,
+	})
+
+	local furtherReachEnabled = false
+	grabModsBox:AddToggle("FurtherReach", {
+		Text = "Further Reach",
+		Default = false,
+		Callback = function(enabled)
+			furtherReachEnabled = enabled
+			if enabled then
+				pcall(function()
+					local RS = ReplicatedStorage
+					local DataEvents = RS:FindFirstChild("DataEvents")
+					if DataEvents then
+						DataEvents.UpdateLineColorsEvent:FireServer(ColorSequence.new({
+							ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+							ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 195)),
+						}))
+					end
+					local GamepassEvents = RS:FindFirstChild("GamepassEvents")
+					local Notifier = GamepassEvents and GamepassEvents:FindFirstChild("FurtherReachBoughtNotifier")
+					if Notifier then
+						for _, conn in pairs(getconnections(Notifier.OnClientEvent)) do
+							for i in debug.getupvalues(conn.Function) do
+								debug.setupvalue(conn.Function, i, 45)
+							end
+						end
+					end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Further Reach ON", Time = 2 })
+			else
+				pcall(function()
+					local RS = ReplicatedStorage
+					local GamepassEvents = RS:FindFirstChild("GamepassEvents")
+					local Notifier = GamepassEvents and GamepassEvents:FindFirstChild("FurtherReachBoughtNotifier")
+					if Notifier then
+						for _, conn in pairs(getconnections(Notifier.OnClientEvent)) do
+							for i in debug.getupvalues(conn.Function) do
+								debug.setupvalue(conn.Function, i, 25)
+							end
+						end
+					end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Further Reach OFF", Time = 2 })
 			end
 		end,
 	})
@@ -7902,6 +8060,125 @@ do
 			end
 		end,
 	})
+
+	local aimBox = Tabs.Visual:AddGroupbox({ Side = "Right", Name = "Aimbot (XOCU)" })
+	local aimbotEnabled = false
+	local aimbotDistance = 30
+	local aimbotSmoothness = 0.5
+	local aimbotFOV = 100
+	local aimbotPart = "Head"
+	local aimbotConn = nil
+
+	aimBox:AddToggle("Aimbot", {
+		Text = "Enable Aimbot",
+		Default = false,
+		Callback = function(enabled)
+			aimbotEnabled = enabled
+			if enabled then
+				if aimbotConn then aimbotConn:Disconnect() end
+				aimbotConn = RunService.RenderStepped:Connect(function()
+					if not aimbotEnabled then return end
+					local char = LocalPlayer.Character
+					local root = char and char:FindFirstChild("HumanoidRootPart")
+					if not root then return end
+					local cam = workspace.CurrentCamera
+					local center = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+					local closest, closestDist = nil, math.huge
+					for _, plr in ipairs(Players:GetPlayers()) do
+						if plr ~= LocalPlayer and plr.Character then
+							local tPart = plr.Character:FindFirstChild(aimbotPart)
+							local tHum = plr.Character:FindFirstChildOfClass("Humanoid")
+							if tPart and tHum and tHum.Health > 0 then
+								local dist = (tPart.Position - root.Position).Magnitude
+								if dist <= aimbotDistance then
+									local sp, onScreen = cam:WorldToViewportPoint(tPart.Position)
+									if onScreen then
+										local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+										if sd <= aimbotFOV and sd < closestDist then
+											closestDist = sd
+											closest = plr
+										end
+									end
+								end
+							end
+						end
+					end
+					if closest and closest.Character then
+						local tPart = closest.Character:FindFirstChild(aimbotPart)
+						if tPart then
+							local currentCF = cam.CFrame
+							local lookAtCF = CFrame.lookAt(currentCF.Position, tPart.Position)
+							cam.CFrame = currentCF:Lerp(lookAtCF, aimbotSmoothness)
+						end
+					end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Aimbot ON", Time = 2 })
+			else
+				if aimbotConn then aimbotConn:Disconnect(); aimbotConn = nil end
+				Library:Notify({ Title = "Rose", Description = "Aimbot OFF", Time = 2 })
+			end
+		end,
+	})
+
+	aimBox:AddSlider("AimbotDistance", { Text = "Distance", Default = 30, Min = 5, Max = 100, Rounding = 0, Callback = function(v) aimbotDistance = v end })
+	aimBox:AddSlider("AimbotSmoothness", { Text = "Smoothness", Default = 0.5, Min = 0.1, Max = 1, Rounding = 1, Callback = function(v) aimbotSmoothness = v end })
+	aimBox:AddSlider("AimbotFOV", { Text = "FOV", Default = 100, Min = 10, Max = 360, Rounding = 0, Callback = function(v) aimbotFOV = v end })
+	aimBox:AddDropdown("AimbotPart", { Values = { "Head", "HumanoidRootPart", "Torso" }, Default = "Head", Text = "Aim Part", Callback = function(v) aimbotPart = v end })
+
+	local triggerBox = Tabs.Visual:AddGroupbox({ Side = "Right", Name = "Trigger Bot (XOCU)" })
+	local triggerEnabled = false
+	local triggerDistance = 25
+	local triggerDelay = 0.05
+	local triggerConn = nil
+
+	triggerBox:AddToggle("TriggerBot", {
+		Text = "Trigger Bot",
+		Default = false,
+		Callback = function(enabled)
+			triggerEnabled = enabled
+			if enabled then
+				if triggerConn then triggerConn:Disconnect() end
+				triggerConn = task.spawn(function()
+					while triggerEnabled do
+						local char = LocalPlayer.Character
+						local root = char and char:FindFirstChild("HumanoidRootPart")
+						if root then
+							local cam = workspace.CurrentCamera
+							local center = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+							local closest, closestDist = nil, math.huge
+							for _, plr in ipairs(Players:GetPlayers()) do
+								if plr ~= LocalPlayer and plr.Character then
+									local tRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+									local tHum = plr.Character:FindFirstChildOfClass("Humanoid")
+									if tRoot and tHum and tHum.Health > 0 then
+										local dist = (tRoot.Position - root.Position).Magnitude
+										if dist <= triggerDistance then
+											local sp, onScreen = cam:WorldToViewportPoint(tRoot.Position)
+											if onScreen then
+												local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+												if sd < closestDist then closestDist = sd; closest = plr end
+											end
+										end
+									end
+								end
+							end
+							if closest then
+								pcall(function() mouse1press(); task.wait(0.05); mouse1release() end)
+							end
+						end
+						task.wait(triggerDelay)
+					end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Trigger Bot ON", Time = 2 })
+			else
+				triggerEnabled = false
+				Library:Notify({ Title = "Rose", Description = "Trigger Bot OFF", Time = 2 })
+			end
+		end,
+	})
+
+	triggerBox:AddSlider("TriggerDistance", { Text = "Distance", Default = 25, Min = 5, Max = 50, Rounding = 0, Callback = function(v) triggerDistance = v end })
+	triggerBox:AddSlider("TriggerDelay", { Text = "Delay", Default = 0.05, Min = 0.01, Max = 0.5, Rounding = 2, Callback = function(v) triggerDelay = v end })
 
 	local espBox = Tabs.Visual:AddGroupbox({ Side = "Left", Name = "ESP" })
 
