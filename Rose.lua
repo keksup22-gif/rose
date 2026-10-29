@@ -128,6 +128,7 @@ State.runtime.loopApple = false
 State.runtime.autoSit = false
 State.runtime.traceOn = false
 State.runtime.espOn = false
+State.runtime.autoAttacker = false
 State.runtime.pktNotify = true
 State.runtime.pktCooldown = false
 State.runtime.destroyGucciTask = nil
@@ -5178,6 +5179,48 @@ do
 				Library:Notify({ Title = "Rose", Description = "Auto Reset ON", Time = 2 })
 			else
 				Library:Notify({ Title = "Rose", Description = "Auto Reset OFF", Time = 2 })
+			end
+		end,
+	})
+
+	safetyBox:AddToggle("AutoAttacker", {
+		Text = "Auto Attacker (Endoris)",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.autoAttacker = enabled
+
+			if enabled then
+				if LocalPlayer.Character then
+					local head = LocalPlayer.Character:FindFirstChild("Head")
+					if head then
+						head.ChildAdded:Connect(function(child)
+							if not State.runtime.autoAttacker then return end
+							if child.Name ~= "PartOwner" then return end
+							local holderName = tostring(child.Value)
+							local holder = Players:FindFirstChild(holderName)
+							if not holder or not holder.Character then return end
+							if holder == LocalPlayer then return end
+							local hrp = holder.Character:FindFirstChild("HumanoidRootPart")
+							local hum = holder.Character:FindFirstChildOfClass("Humanoid")
+							if not hrp or not hum or hum.Health <= 0 then return end
+							local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+							if not myRoot then return end
+							local diff = hrp.Position - myRoot.Position
+							local look = diff.Magnitude > 0.1 and diff.Unit or Vector3.new(0, 0, 1)
+							local bv = Instance.new("BodyVelocity", hrp)
+							bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+							bv.Velocity = Vector3.new(look.X, 0.5, look.Z) * 100
+							task.wait(0.1)
+							bv:Destroy()
+							local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+							local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+							if dg then pcall(function() dg:FireServer(hrp) end) end
+						end)
+					end
+				end
+				Library:Notify({ Title = "Rose", Description = "Auto Attacker ON", Time = 2 })
+			else
+				Library:Notify({ Title = "Rose", Description = "Auto Attacker OFF", Time = 2 })
 			end
 		end,
 	})
