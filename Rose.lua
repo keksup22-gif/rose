@@ -7600,7 +7600,7 @@ do
 	end
 
 	local customBox = Tabs.Custom:AddGroupbox({ Side = "Left", Name = "Kunai Message (Endoris)" })
-	customBox:AddTextbox("KunaiMsg", { Default = "Hello from Rose!", Text = "Message", Placeholder = "Type message..." })
+	customBox:AddInput("KunaiMsg", { Default = "Hello from Rose!", Text = "Message", Placeholder = "Type message...", Callback = function() end })
 	customBox:AddButton({ Text = "Show Kunai Message", Func = function()
 		local msg = Options.KunaiMsg and Options.KunaiMsg.Value or "Hello from Rose!"
 		typeKunaiMessage(msg, 0.038)
