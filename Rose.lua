@@ -5906,6 +5906,93 @@ do
 	})
 
 	-- TP to Target
+	local smoothFlyState = false
+	local smoothFlyConn = nil
+	local smoothFlyBV = nil
+	local smoothFlyBG = nil
+	local smoothFlySpeed = 50
+
+	local moveBoxFlight = Tabs.Movement:AddGroupbox({ Side = "Right", Name = "Smooth Fly (XOCU)" })
+	moveBoxFlight:AddSlider("SmoothFlySpeed", {
+		Text = "Speed",
+		Default = 50,
+		Min = 5,
+		Max = 300,
+		Rounding = 0,
+		Callback = function(v) smoothFlySpeed = v end,
+	})
+	moveBoxFlight:AddToggle("SmoothFly", {
+		Text = "Smooth Fly",
+		Default = false,
+		Callback = function(enabled)
+			smoothFlyState = enabled
+			local character = LocalPlayer.Character
+			local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if enabled then
+				if not rootPart or not humanoid then
+					Library:Notify({ Title = "Rose", Description = "No character", Time = 2 })
+					smoothFlyState = false
+					if Toggles.SmoothFly then Toggles.SmoothFly:SetValue(false) end
+					return
+				end
+				humanoid.PlatformStand = true
+				smoothFlyBV = Instance.new("BodyVelocity")
+				smoothFlyBV.Velocity = Vector3.zero
+				smoothFlyBV.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+				smoothFlyBV.P = 10000
+				smoothFlyBV.Parent = rootPart
+				smoothFlyBG = Instance.new("BodyGyro")
+				smoothFlyBG.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+				smoothFlyBG.P = 10000
+				smoothFlyBG.CFrame = rootPart.CFrame
+				smoothFlyBG.Parent = rootPart
+				local UIS = game:GetService("UserInputService")
+				local curVel = Vector3.zero
+				smoothFlyConn = RunService.Heartbeat:Connect(function()
+					if not smoothFlyState then return end
+					local ct = getFlightTarget and getFlightTarget() or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart"))
+					if not ct or not ct.Parent then return end
+					if smoothFlyBV and smoothFlyBV.Parent ~= ct then
+						-- re-attach
+						if smoothFlyBV.Parent then smoothFlyBV:Destroy() end
+						if smoothFlyBG.Parent then smoothFlyBG:Destroy() end
+						smoothFlyBV = Instance.new("BodyVelocity"); smoothFlyBV.MaxForce = Vector3.new(1e9,1e9,1e9); smoothFlyBV.P=10000; smoothFlyBV.Parent=ct
+						smoothFlyBG = Instance.new("BodyGyro"); smoothFlyBG.MaxTorque = Vector3.new(1e9,1e9,1e9); smoothFlyBG.P=10000; smoothFlyBG.Parent=ct
+					end
+					local cam = workspace.CurrentCamera
+					local moveDir = Vector3.zero
+					if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+					if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+					if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+					if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+					if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
+					if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
+					if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
+					local targetVel = moveDir * smoothFlySpeed
+					curVel = curVel:Lerp(targetVel, 0.2)
+					if smoothFlyBV and smoothFlyBV.Parent then smoothFlyBV.Velocity = curVel end
+					if smoothFlyBG and smoothFlyBG.Parent then smoothFlyBG.CFrame = cam.CFrame end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Smooth Fly ON", Time = 2 })
+			else
+				smoothFlyState = false
+				if smoothFlyConn then smoothFlyConn:Disconnect(); smoothFlyConn = nil end
+				if smoothFlyBV and smoothFlyBV.Parent then smoothFlyBV:Destroy(); smoothFlyBV = nil end
+				if smoothFlyBG and smoothFlyBG.Parent then smoothFlyBG:Destroy(); smoothFlyBG = nil end
+				if humanoid then humanoid.PlatformStand = false end
+				Library:Notify({ Title = "Rose", Description = "Smooth Fly OFF", Time = 2 })
+			end
+		end,
+	})
+
+	LocalPlayer.CharacterAdded:Connect(function()
+		smoothFlyState = false
+		if smoothFlyConn then smoothFlyConn:Disconnect(); smoothFlyConn = nil end
+		if smoothFlyBV and smoothFlyBV.Parent then smoothFlyBV:Destroy(); smoothFlyBV = nil end
+		if smoothFlyBG and smoothFlyBG.Parent then smoothFlyBG:Destroy(); smoothFlyBG = nil end
+	end)
+
 	local moveBox2 = Tabs.Movement:AddGroupbox({ Side = "Left", Name = "Teleport" })
 
 	moveBox2:AddButton({
