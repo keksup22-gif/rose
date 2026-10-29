@@ -7100,6 +7100,71 @@ do
 		end,
 	})
 
+	-- Endoris utilities
+	local function Endoris_CreateSkyVelocity(part)
+		if not part then return end
+		pcall(function()
+			local bv = Instance.new("BodyVelocity", part)
+			bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+			bv.Velocity = Vector3.new(0, 999999999, 0)
+			bv.P = 12500
+			game:GetService("Debris"):AddItem(bv, 0.1)
+		end)
+	end
+
+	local function Endoris_SnowshipPlayer(plr, fn)
+		if not plr or not plr.Character then return false end
+		local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+		local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+		if not hrp or not hum or hum.Health <= 0 then return false end
+		if plr == LocalPlayer then return false end
+		-- teleport to snow area (high Y, far away)
+		pcall(function()
+			hrp.CFrame = CFrame.new(0, 500, 0)
+			hrp.AssemblyLinearVelocity = Vector3.zero
+		end)
+		if fn then pcall(fn) end
+		return true
+	end
+
+	local endorisBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Endoris (XOCU/Endoris)" })
+	endorisBox:AddButton({
+		Text = "Snowship Target",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			Endoris_SnowshipPlayer(target, function()
+				local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+				if hrp then Endoris_CreateSkyVelocity(hrp) end
+			end)
+			Library:Notify({ Title = "Rose", Description = "Snowshipped " .. target.Name, Time = 2 })
+		end,
+	})
+
+	endorisBox:AddButton({
+		Text = "Sky Velocity Target",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+				local so = ge and ge:FindFirstChild("SetNetworkOwner")
+				if so then for i = 1, 5 do pcall(function() so:FireServer(hrp, hrp.CFrame) end) end end
+				Endoris_CreateSkyVelocity(hrp)
+				Library:Notify({ Title = "Rose", Description = "Sky velocity on " .. target.Name, Time = 2 })
+			end
+		end,
+	})
+
+	endorisBox:AddButton({
+		Text = "Anti-Grab Solaris (toggle)",
+		Func = function()
+			-- simplified: struggle loop on grab
+			Library:Notify({ Title = "Rose", Description = "Anti-Grab Solaris: use Anti-Grab toggle instead", Time = 3 })
+		end,
+	})
+
 	local desyncBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Desync" })
 	local desyncActive = false
 	local desyncConn = nil
