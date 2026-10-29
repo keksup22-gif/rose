@@ -7009,25 +7009,7 @@ do
 		end,
 	})
 
-	-- Fly
-	local flyActive = false
-	local flyBodyVelocity = nil
-	local flyBodyGyro = nil
-	local flySpeed = 50
-	local flyConn = nil
-
-	moveBox2:AddSlider("FlySpeed", {
-		Text = "Fly Speed",
-		Default = 50,
-		Min = 5,
-		Max = 300,
-		Rounding = 0,
-		Callback = function(v)
-			flySpeed = v
-		end,
-	})
-
-	-- Basic Fly removed; use Smooth Fly (XOCU) instead
+	-- (Basic Fly removed; use Smooth Fly (XOCU) instead)
 end
 
 do
