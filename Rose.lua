@@ -6170,6 +6170,47 @@ do
 	})
 
 	kickBox:AddButton({
+		Text = "Debug Kick",
+		Func = function()
+			local targetName = State.runtime.target
+			print("[Rose Debug] target = " .. tostring(targetName))
+			if not targetName or targetName == "" then
+				Library:Notify({ Title = "Rose Debug", Description = "No target selected! Select in Target tab", Time = 3 })
+				return
+			end
+			local target = Players:FindFirstChild(targetName)
+			print("[Rose Debug] target player found: " .. tostring(target ~= nil))
+			if not target or not target.Character then
+				Library:Notify({ Title = "Rose Debug", Description = "Target has no character", Time = 3 })
+				return
+			end
+			local tr = target.Character:FindFirstChild("HumanoidRootPart")
+			local th = target.Character:FindFirstChildOfClass("Humanoid")
+			print("[Rose Debug] HRP found: " .. tostring(tr ~= nil) .. ", Humanoid: " .. tostring(th ~= nil))
+			if not tr or not th then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			print("[Rose Debug] GrabEvents found: " .. tostring(ge ~= nil))
+			if not ge then return end
+			local so = ge:FindFirstChild("SetNetworkOwner")
+			print("[Rose Debug] SetNetworkOwner found: " .. tostring(so ~= nil))
+			if so then
+				for i = 1, 3 do
+					local ok = pcall(function() so:FireServer(tr, tr.CFrame) end)
+					print("[Rose Debug] FireServer #" .. i .. " ok: " .. tostring(ok))
+				end
+			end
+			pcall(function()
+				th.PlatformStand = true
+				tr.AssemblyLinearVelocity = Vector3.new(0, 200, 0)
+				print("[Rose Debug] Velocity applied")
+			end)
+			local dg = ge:FindFirstChild("DestroyGrabLine")
+			if dg then pcall(function() dg:FireServer(tr); print("[Rose Debug] DestroyGrabLine fired") end) end
+			Library:Notify({ Title = "Rose Debug", Description = "Check console (F9)", Time = 3 })
+		end,
+	})
+
+	kickBox:AddButton({
 		Text = "Destroy Server",
 		Func = function()
 			task.spawn(function()
