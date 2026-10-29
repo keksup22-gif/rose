@@ -5757,6 +5757,106 @@ do
 	})
 
 	kickBox:AddButton({
+		Text = "Heaven Kick (XOCU)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local root = target.Character:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			pcall(function()
+				if so then so:FireServer(root, root.CFrame) end
+				if dg then dg:FireServer(root) end
+				root.CFrame = CFrame.new(0, 999999999999, 0)
+				local bv = Instance.new("BodyVelocity")
+				bv.Name = "RinneganHeaven"
+				bv.MaxForce = Vector3.new(0, math.huge, 0)
+				bv.Velocity = Vector3.new(0, 99999999999999, 0)
+				bv.P = 12500
+				bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			end)
+			Library:Notify({ Title = "Rose", Description = "Heaven kicked " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
+		Text = "Hell Kick (XOCU)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local root = target.Character:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			pcall(function()
+				if so then so:FireServer(root, root.CFrame) end
+				if dg then dg:FireServer(root) end
+				for _, part in ipairs(target.Character:GetDescendants()) do
+					if part:IsA("BasePart") and not part.Anchored then part.CanCollide = false end
+				end
+				local bv = Instance.new("BodyVelocity")
+				bv.Name = "RinneganSpy"
+				bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+				bv.Velocity = Vector3.new(0, -100000000, 0)
+				bv.P = 12500
+				bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			end)
+			Library:Notify({ Title = "Rose", Description = "Hell kicked " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
+		Text = "China Kick (XOCU)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local root = target.Character:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			pcall(function()
+				if so then so:FireServer(root, root.CFrame) end
+				if dg then dg:FireServer(root) end
+				root.CFrame = CFrame.new(591, 153, -101)
+			end)
+			Library:Notify({ Title = "Rose", Description = "China kicked " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
+		Text = "Ragdoll Kick (XOCU)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local root = target.Character:FindFirstChild("HumanoidRootPart")
+			local hum = target.Character:FindFirstChildOfClass("Humanoid")
+			if not root or not hum then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			pcall(function()
+				if so then so:FireServer(root, root.CFrame) end
+				if dg then dg:FireServer(root) end
+				local bv = Instance.new("BodyVelocity")
+				bv.Name = "RinneganSpy"
+				bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+				bv.Velocity = Vector3.new(0, -20, 0)
+				bv.P = 12500
+				bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+				hum.PlatformStand = true
+			end)
+			Library:Notify({ Title = "Rose", Description = "Ragdoll kicked " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
 		Text = "Destroy Server",
 		Func = function()
 			task.spawn(function()
