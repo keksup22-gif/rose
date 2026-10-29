@@ -6343,6 +6343,71 @@ do
 		end,
 	})
 
+	local deathAuraBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Death Aura (XOCU)" })
+	local deathAuraActive = false
+	local deathAuraConn = nil
+
+	deathAuraBox:AddToggle("DeathAura", {
+		Text = "Death Aura",
+		Default = false,
+		Callback = function(enabled)
+			deathAuraActive = enabled
+			if enabled then
+				if deathAuraConn then deathAuraConn:Disconnect() end
+				deathAuraConn = RunService.Heartbeat:Connect(function()
+					if not deathAuraActive then return end
+					for _, plr in ipairs(Players:GetPlayers()) do
+						if plr ~= LocalPlayer and plr.Character then
+							local char = plr.Character
+							local hrp = char:FindFirstChild("HumanoidRootPart")
+							local head = char:FindFirstChild("Head")
+							local hum = char:FindFirstChildOfClass("Humanoid")
+							local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+							if hrp and head and hum and hum.Health > 0 and myRoot then
+								if (hrp.Position - myRoot.Position).Magnitude <= 25 then
+									pcall(function()
+										local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+										local so = ge and ge:FindFirstChild("SetNetworkOwner")
+										local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+										if so then so:FireServer(hrp, hrp.CFrame) end
+										task.wait(0.1)
+										if dg then dg:FireServer(hrp) end
+										if head:FindFirstChild("PartOwner") and head.PartOwner.Value == LocalPlayer.Name then
+											for _, part in ipairs(char:GetChildren()) do
+												if part:IsA("BasePart") then
+													part.CFrame = CFrame.new(-1000000000, 1000000000, -1000000000)
+												end
+											end
+											task.wait()
+											for _, part in ipairs(char:GetChildren()) do
+												if part:IsA("BasePart") then
+													part.CFrame = CFrame.new(-1000000000, 1000000000, -1000000000)
+												end
+											end
+											local bv = Instance.new("BodyVelocity")
+											bv.Velocity = Vector3.new(0, -9999999, 0)
+											bv.MaxForce = Vector3.new(9000000000, 9000000000, 9000000000)
+											bv.P = 100000075
+											bv.Parent = hrp
+											hum.Sit = false
+											hum.Jump = true
+											hum.BreakJointsOnDeath = false
+											hum:ChangeState(Enum.HumanoidStateType.Dead)
+											game:GetService("Debris"):AddItem(bv, 2)
+										end
+									end)
+								end
+							end
+						end
+					end)
+				Library:Notify({ Title = "Rose", Description = "Death Aura ON", Time = 2 })
+			else
+				if deathAuraConn then deathAuraConn:Disconnect(); deathAuraConn = nil end
+				Library:Notify({ Title = "Rose", Description = "Death Aura OFF", Time = 2 })
+			end
+		end,
+	})
+
 	local hellAuraBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Hell Send Aura (XOCU)" })
 	local hellAuraActive = false
 	local hellAuraConn = nil
