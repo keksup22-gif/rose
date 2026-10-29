@@ -6343,6 +6343,66 @@ do
 		end,
 	})
 
+	local hellAuraBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Hell Send Aura (XOCU)" })
+	local hellAuraActive = false
+	local hellAuraConn = nil
+	local hellAuraRadius = 25
+
+	hellAuraBox:AddSlider("HellAuraRadius", {
+		Text = "Aura Radius",
+		Default = 25,
+		Min = 5,
+		Max = 100,
+		Rounding = 0,
+		Callback = function(v) hellAuraRadius = v end,
+	})
+
+	hellAuraBox:AddToggle("HellSendAura", {
+		Text = "Hell Send Aura",
+		Default = false,
+		Callback = function(enabled)
+			hellAuraActive = enabled
+			if enabled then
+				if hellAuraConn then hellAuraConn:Disconnect() end
+				hellAuraConn = RunService.Heartbeat:Connect(function()
+					if not hellAuraActive then return end
+					local myChar = LocalPlayer.Character
+					local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+					if not myRoot then return end
+					for _, plr in ipairs(Players:GetPlayers()) do
+						if plr ~= LocalPlayer and plr.Character then
+							local char = plr.Character
+							local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+							if torso and (torso.Position - myRoot.Position).Magnitude <= hellAuraRadius then
+								local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+								local so = ge and ge:FindFirstChild("SetNetworkOwner")
+								if so then pcall(function() so:FireServer(torso, myRoot.CFrame) end) end
+								for _, part in ipairs(char:GetDescendants()) do
+									if part:IsA("BasePart") then pcall(function() part.CanCollide = false end) end
+								end
+								local bp = torso:FindFirstChild("HellAuraPos") or Instance.new("BodyPosition")
+								bp.Name = "HellAuraPos"
+								bp.MaxForce = Vector3.new(100000, 100000, 100000)
+								bp.D = 500; bp.P = 50000; bp.Parent = torso
+								local bg = torso:FindFirstChild("HellAuraGyro") or Instance.new("BodyGyro")
+								bg.Name = "HellAuraGyro"
+								bg.MaxTorque = Vector3.new(100000, 100000, 100000)
+								bg.D = 500; bg.P = 50000; bg.Parent = torso
+								local look = Camera.CFrame.LookVector
+								bp.Position = myRoot.Position + look * 15 + Vector3.new(0, 5, 0)
+								bg.CFrame = CFrame.new(torso.Position, myRoot.Position)
+							end
+						end
+					end)
+				end)
+				Library:Notify({ Title = "Rose", Description = "Hell Send Aura ON", Time = 2 })
+			else
+				if hellAuraConn then hellAuraConn:Disconnect(); hellAuraConn = nil end
+				Library:Notify({ Title = "Rose", Description = "Hell Send Aura OFF", Time = 2 })
+			end
+		end,
+	})
+
 	local desyncBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Desync" })
 	local desyncActive = false
 	local desyncConn = nil
