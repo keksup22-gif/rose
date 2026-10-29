@@ -5958,6 +5958,40 @@ do
 	})
 
 	kickBox:AddButton({
+		Text = "Ownership Kick",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local root = target.Character:FindFirstChild("HumanoidRootPart")
+			local hum = target.Character:FindFirstChildOfClass("Humanoid")
+			if not root or not hum then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			-- spam ownership to take control
+			for i = 1, 20 do
+				pcall(function() so:FireServer(root, root.CFrame) end)
+			end
+			task.wait(0.1)
+			pcall(function()
+				hum.PlatformStand = true
+				if dg then dg:FireServer(root) end
+				root.AssemblyLinearVelocity = Vector3.new(0, 500, 0)
+				root.AssemblyAngularVelocity = Vector3.new(50, 50, 50)
+			end)
+			-- repeat ownership spam
+			task.spawn(function()
+				for i = 1, 10 do
+					task.wait(0.1)
+					pcall(function() so:FireServer(root, root.CFrame) end)
+					pcall(function() root.AssemblyLinearVelocity = Vector3.new(0, 500, 0) end)
+				end
+			end)
+			Library:Notify({ Title = "Rose", Description = "Ownership kick on " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
 		Text = "Destroy Server",
 		Func = function()
 			task.spawn(function()
