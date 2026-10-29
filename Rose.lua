@@ -129,6 +129,7 @@ State.runtime.loopApple = false
 State.runtime.autoSit = false
 State.runtime.traceOn = false
 State.runtime.espOn = false
+State.runtime.gucciAntiGrab = false
 State.runtime.autoAttacker = false
 State.runtime.pktNotify = true
 State.runtime.pktCooldown = false
@@ -5129,6 +5130,15 @@ do
 		end,
 	})
 
+	safetyBox:AddToggle("GucciAntiGrab", {
+		Text = "Gucci Anti-Grab (vehicle)",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.gucciAntiGrab = enabled
+			Library:Notify({ Title = "Rose", Description = "Gucci Anti-Grab " .. (enabled and "ON" or "OFF"), Time = 2 })
+		end,
+	})
+
 	safetyBox:AddToggle("Gucci", {
 		Text = "Gucci Mode",
 		Default = false,
@@ -6320,6 +6330,28 @@ State.runtime.resonanceLoopKick = false
 		end,
 	})
 end
+-- Gucci Anti-Grab (vehicle-based) logic
+RunService.Heartbeat:Connect(function()
+	if not State.runtime.gucciAntiGrab then return end
+	local c = LocalPlayer.Character; if not c then return end
+	local root = c:FindFirstChild("HumanoidRootPart"); local hum = c:FindFirstChildOfClass("Humanoid")
+	if not root or not hum then return end
+	local grabbed = false
+	for _, d in ipairs(c:GetDescendants()) do
+		if (d:IsA("AlignPosition") or d:IsA("BodyPosition") or d:IsA("BodyGyro")) and d.Name ~= "RoseAlign" then grabbed = true; break end
+	end
+	if not grabbed then return end
+	local best, bd = nil, math.huge
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if (obj:IsA("VehicleSeat") or obj:IsA("Seat")) and obj.Occupant == nil then
+			local dd = (obj.Position - root.Position).Magnitude
+			if dd < bd and dd < 80 then bd = dd; best = obj end
+		end
+	end
+	if best then pcall(function() hum.Sit = true; root.CFrame = best.CFrame; best:Sit(hum) end)
+	else pcall(function() root.CFrame = root.CFrame + Vector3.new(0, 15, 0); root.Velocity = Vector3.zero end) end
+end)
+
 do
 	local packetBox = Tabs.Server:AddGroupbox({ Side = "Left", Name = "Packet Lag" })
 	local packetSize = 1
