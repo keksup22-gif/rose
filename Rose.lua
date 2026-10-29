@@ -7618,6 +7618,19 @@ do
 	local menuBox = Tabs["UI Settings"]:AddGroupbox({ Side = "Left", Name = "Menu" })
 
 	menuBox:AddButton({
+		Text = "Diagnose GrabEvents",
+		Func = function()
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			if not ge then Library:Notify({ Title = "Rose", Description = "GrabEvents NOT FOUND", Time = 3 }); return end
+			local names = {}
+			for _, c in ipairs(ge:GetChildren()) do table.insert(names, c.Name .. " (" .. c.ClassName .. ")") end
+			Library:Notify({ Title = "Rose", Description = table.concat(names, ", "), Time = 10 })
+			print("[Rose Diagnose] GrabEvents:")
+			for _, n in ipairs(names) do print("  " .. n) end
+		end,
+	})
+
+	menuBox:AddButton({
 		Text = "Unload",
 		Func = function()
 			Library:Unload()
