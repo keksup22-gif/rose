@@ -132,6 +132,11 @@ State.runtime.espOn = false
 State.runtime.gucciAntiGrab = false
 State.runtime.antiBlobmanAura = false
 State.runtime.shurikenMinefield = false
+State.runtime.infJump = false
+State.runtime.spinChar = false
+State.runtime.posLock = false
+State.runtime.antiLoopKill = false
+State.runtime.loopTP = false
 State.runtime.autoExpEnabled = false
 State.runtime.antiAntiKick = false
 State.runtime.antiBlobmanAura = false
@@ -7179,6 +7184,194 @@ do
 		if smoothFlyConn then smoothFlyConn:Disconnect(); smoothFlyConn = nil end
 		if smoothFlyBV and smoothFlyBV.Parent then smoothFlyBV:Destroy(); smoothFlyBV = nil end
 		if smoothFlyBG and smoothFlyBG.Parent then smoothFlyBG:Destroy(); smoothFlyBG = nil end
+	end)
+
+	-- Platform TP (XOCU)
+	local platformBox = Tabs.Movement:AddGroupbox({ Side = "Right", Name = "Platform TP (XOCU)" })
+	local platformPart = nil
+	local platformActive = false
+	local platformSavedPos = nil
+	platformBox:AddToggle("PlatformTP", {
+		Text = "Enable Platform TP",
+		Default = false,
+		Callback = function(enabled)
+			platformActive = enabled
+			if enabled then
+				if not platformPart then
+					platformPart = Instance.new("Part", workspace)
+					platformPart.Name = "SkyBase"
+					platformPart.Anchored = true
+					platformPart.Size = Vector3.new(1500, 2, 1500)
+					platformPart.CFrame = CFrame.new(0, 1000000, 0)
+					workspace.FallenPartsDestroyHeight = -9999999
+				end
+				Library:Notify({ Title = "Rose", Description = "Platform TP ON", Time = 2 })
+			else
+				platformActive = false
+				Library:Notify({ Title = "Rose", Description = "Platform TP OFF", Time = 2 })
+			end
+		end,
+	})
+	platformBox:AddKeybind("PlatformTPKey", {
+		Text = "Platform TP Execute",
+		Default = "X",
+		Callback = function()
+			if not platformActive or not platformPart then return end
+			local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+			if not platformSavedPos then
+				platformSavedPos = root.CFrame
+				root.CFrame = platformPart.CFrame + Vector3.new(0, 5, 0)
+				root.AssemblyLinearVelocity = Vector3.zero
+			else
+				root.CFrame = platformSavedPos
+				platformSavedPos = nil
+			end
+		end,
+	})
+
+	-- Misc movement (XOCU)
+	local miscMoveBox = Tabs.Movement:AddGroupbox({ Side = "Right", Name = "Misc (XOCU)" })
+	miscMoveBox:AddToggle("WaterWalk", {
+		Text = "Water Walk",
+		Default = false,
+		Callback = function(enabled)
+			local ws = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("AlwaysHereTweenedObjects") and workspace.Map.AlwaysHereTweenedObjects:FindFirstChild("Ocean")
+			if ws then
+				for _, v in ipairs(ws:GetDescendants()) do
+					if v.Name == "Ocean" and v:IsA("BasePart") then v.CanCollide = enabled end
+				end
+			end
+			Library:Notify({ Title = "Rose", Description = "Water Walk " .. (enabled and "ON" or "OFF"), Time = 2 })
+		end,
+	})
+	miscMoveBox:AddToggle("InfJump", {
+		Text = "Inf Jump",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.infJump = enabled
+			Library:Notify({ Title = "Rose", Description = "Inf Jump " .. (enabled and "ON" or "OFF"), Time = 2 })
+		end,
+	})
+	miscMoveBox:AddToggle("SpinChar", {
+		Text = "Spin Character",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.spinChar = enabled
+			if enabled then
+				task.spawn(function()
+					while State.runtime.spinChar do
+						local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+						if root then root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(5), 0) end
+						task.wait()
+					end
+				end)
+			end
+			Library:Notify({ Title = "Rose", Description = "Spin " .. (enabled and "ON" or "OFF"), Time = 2 })
+		end,
+	})
+	miscMoveBox:AddToggle("DeleteLegs", {
+		Text = "Delete Legs",
+		Default = false,
+		Callback = function(enabled)
+			if not enabled then return end
+			local char = LocalPlayer.Character
+			if not char then return end
+			local torso = char:FindFirstChild("Torso")
+			local ll = char:FindFirstChild("Left Leg")
+			local rl = char:FindFirstChild("Right Leg")
+			if torso and ll and rl then
+				local void = workspace.FallenPartsDestroyHeight
+				workspace.FallenPartsDestroyHeight = -100
+				task.spawn(function()
+					local hrp = char:FindFirstChild("HumanoidRootPart")
+					if hrp then ReplicatedStorage.CharacterEvents.RagdollRemote:FireServer(hrp, 2) end
+					task.wait(0.5)
+					if rl then rl.CFrame = CFrame.new(0, -10000, 0) end
+					if ll then ll.CFrame = CFrame.new(0, -10000, 0) end
+					task.wait(0.3)
+					if torso then torso.CFrame = CFrame.new(0, -9970, 0) end
+					task.wait(0.5)
+					if torso then torso.CFrame = torso.CFrame end
+					task.wait(0.5)
+					workspace.FallenPartsDestroyHeight = void
+				end)
+			end
+			Library:Notify({ Title = "Rose", Description = "Legs deleted", Time = 2 })
+		end,
+	})
+	miscMoveBox:AddToggle("PosLock", {
+		Text = "Pos Lock",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.posLock = enabled
+			if enabled then
+				local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+				if root then State.runtime.posLockCF = root.CFrame end
+				task.spawn(function()
+					while State.runtime.posLock do
+						local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+						if r and State.runtime.posLockCF then
+							local assembly = r.AssemblyRootPart or r
+							assembly.AssemblyLinearVelocity = Vector3.zero
+							assembly.AssemblyAngularVelocity = Vector3.zero
+							assembly.CFrame = State.runtime.posLockCF
+						end
+						task.wait()
+					end
+				end)
+			else
+				State.runtime.posLockCF = nil
+			end
+			Library:Notify({ Title = "Rose", Description = "Pos Lock " .. (enabled and "ON" or "OFF"), Time = 2 })
+		end,
+	})
+	miscMoveBox:AddToggle("AntiLoopKill", {
+		Text = "Anti Loop Kill",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.antiLoopKill = enabled
+			if enabled then
+				task.spawn(function()
+					while State.runtime.antiLoopKill do
+						local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+						if root then root.CFrame = CFrame.new(280, -4, 465) end
+						task.wait()
+					end
+				end)
+			end
+			Library:Notify({ Title = "Rose", Description = "Anti Loop Kill " .. (enabled and "ON" or "OFF"), Time = 2 })
+		end,
+	})
+	miscMoveBox:AddToggle("LoopTP", {
+		Text = "Loop TP (random)",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.loopTP = enabled
+			if enabled then
+				task.spawn(function()
+					while State.runtime.loopTP do
+						local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+						if root then
+							root.CFrame = CFrame.new(math.random(-10000, 10000), math.random(-50, 500), math.random(-10000, 10000))
+						end
+						task.wait()
+					end
+				end)
+			end
+			Library:Notify({ Title = "Rose", Description = "Loop TP " .. (enabled and "ON" or "OFF"), Time = 2 })
+		end,
+	})
+
+	-- Inf Jump handler
+	UserInputService.JumpRequest:Connect(function()
+		if State.runtime.infJump then
+			local char = LocalPlayer.Character
+			local hum = char and char:FindFirstChild("Humanoid")
+			if hum and hum:GetState() ~= Enum.HumanoidStateType.Jumping then
+				hum:ChangeState(Enum.HumanoidStateType.Jumping)
+			end
+		end
 	end)
 
 	local moveBox2 = Tabs.Movement:AddGroupbox({ Side = "Left", Name = "Teleport" })
