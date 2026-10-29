@@ -6824,9 +6824,10 @@ do
 			end
 		end,
 	})
-	platformBox:AddKeybind("PlatformTPKey", {
+	platformBox:AddKeyPicker("PlatformTPKey", {
 		Text = "Platform TP Execute",
 		Default = "X",
+		NoUI = false,
 		Callback = function()
 			if not platformActive or not platformPart then return end
 			local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
