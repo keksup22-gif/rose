@@ -7597,76 +7597,7 @@ do
 		end,
 	})
 
-	moveBox2:AddToggle("FlyToggle", {
-		Text = "Fly",
-		Default = false,
-		Callback = function(enabled)
-			flyActive = enabled
-			local character = LocalPlayer.Character
-			local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-
-			if enabled then
-				if not rootPart or not humanoid then
-					Library:Notify({ Title = "Rose", Description = "No character", Time = 2 })
-					flyActive = false
-					if Toggles.FlyToggle then Toggles.FlyToggle:SetValue(false) end
-					return
-				end
-
-				humanoid.PlatformStand = true
-
-				flyBodyVelocity = Instance.new("BodyVelocity")
-				flyBodyVelocity.Velocity = Vector3.zero
-				flyBodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-				flyBodyVelocity.Parent = rootPart
-
-				flyBodyGyro = Instance.new("BodyGyro")
-				flyBodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-				flyBodyGyro.P = 1e4
-				flyBodyGyro.CFrame = rootPart.CFrame
-				flyBodyGyro.Parent = rootPart
-
-				local UserInputService = game:GetService("UserInputService")
-				flyConn = RunService.Heartbeat:Connect(function()
-					if not flyActive then return end
-					local cam = workspace.CurrentCamera
-					local cf = cam.CFrame
-					local vel = Vector3.zero
-					if UserInputService:IsKeyDown(Enum.KeyCode.W) then vel = vel + cf.LookVector end
-					if UserInputService:IsKeyDown(Enum.KeyCode.S) then vel = vel - cf.LookVector end
-					if UserInputService:IsKeyDown(Enum.KeyCode.A) then vel = vel - cf.RightVector end
-					if UserInputService:IsKeyDown(Enum.KeyCode.D) then vel = vel + cf.RightVector end
-					if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vel = vel + Vector3.new(0,1,0) end
-					if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then vel = vel - Vector3.new(0,1,0) end
-					if flyBodyVelocity and flyBodyVelocity.Parent then
-						flyBodyVelocity.Velocity = vel.Magnitude > 0 and vel.Unit * flySpeed or Vector3.zero
-					end
-					if flyBodyGyro and flyBodyGyro.Parent then
-						flyBodyGyro.CFrame = cf
-					end
-				end)
-
-				Library:Notify({ Title = "Rose", Description = "Fly ON (WASD+Space/Ctrl)", Time = 2 })
-			else
-				flyActive = false
-				if flyConn then flyConn:Disconnect(); flyConn = nil end
-				if flyBodyVelocity and flyBodyVelocity.Parent then flyBodyVelocity:Destroy(); flyBodyVelocity = nil end
-				if flyBodyGyro and flyBodyGyro.Parent then flyBodyGyro:Destroy(); flyBodyGyro = nil end
-				if humanoid then humanoid.PlatformStand = false end
-				Library:Notify({ Title = "Rose", Description = "Fly OFF", Time = 2 })
-			end
-		end,
-	})
-
-	-- Clean up fly on character respawn
-	LocalPlayer.CharacterAdded:Connect(function()
-		flyActive = false
-		if flyConn then flyConn:Disconnect(); flyConn = nil end
-		if flyBodyVelocity and flyBodyVelocity.Parent then flyBodyVelocity:Destroy(); flyBodyVelocity = nil end
-		if flyBodyGyro and flyBodyGyro.Parent then flyBodyGyro:Destroy(); flyBodyGyro = nil end
-		if Toggles.FlyToggle then Toggles.FlyToggle:SetValue(false) end
-	end)
+	-- Basic Fly removed; use Smooth Fly (XOCU) instead
 end
 
 do
