@@ -132,6 +132,7 @@ State.runtime.espOn = false
 State.runtime.gucciAntiGrab = false
 State.runtime.antiBlobmanAura = false
 State.runtime.shurikenMinefield = false
+State.runtime.antiAntiKick = false
 State.runtime.antiBlobmanAura = false
 State.runtime.autoAttacker = false
 State.runtime.pktNotify = true
@@ -6625,6 +6626,160 @@ do
 			end
 		end,
 	})
+
+	-- Anti Input Lag (from XOCU)
+	local antiInputBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Anti Input Lag (XOCU)" })
+	local antiInputActive = false
+	local antiInputTask = nil
+	antiInputBox:AddToggle("AntiInputLag", {
+		Text = "Anti Input Lag",
+		Default = false,
+		Callback = function(enabled)
+			antiInputActive = enabled
+			if enabled then
+				antiInputTask = task.spawn(function()
+					local holdables = { FoodHamburger=true, FoodCoconut=true, FoodPizzaCheese=true, FoodPizzaPepperoni=true, FoodHotdog=true, FoodMushroomPoison=true, FoodBread=true, FoodDippyEgg=true, FoodMayonnaise=true, FoodFrenchFries=true, FoodMeatStick=true, FoodDonut=true, FoodCakePink=true, InstrumentGuitarBanjo=true, InstrumentGuitarViolin=true, InstrumentGuitarUkulele=true, InstrumentWoodwindSaxophone=true, InstrumentBrassTrumpet=true, InstrumentDrumBongos=true, InstrumentDrumSnare=true, InstrumentPianoMelodica=true, InstrumentVoiceMicrophone=true, CupMugWhite=true, CupMugBrown=true, PoopPile=true, PoopPileSparkle=true }
+					local collected = {}
+					local conn = workspace.DescendantAdded:Connect(function(d)
+						if holdables[d.Name] and d:IsA("Model") then task.spawn(function() if d:WaitForChild("HoldPart", 3) then table.insert(collected, d) end end) end
+					end)
+					for _, d in ipairs(workspace:GetDescendants()) do
+						if holdables[d.Name] and d:IsA("Model") and d:FindFirstChild("HoldPart") then table.insert(collected, d) end
+					end
+					while antiInputActive do
+						local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+						if root then
+							for i = #collected, 1, -1 do
+								local h = collected[i]
+								if not h or not h.Parent or not h:FindFirstChild("HoldPart") then table.remove(collected, i)
+								else
+									local hp = h.HoldPart
+									pcall(function() hp.HoldItemRemoteFunction:InvokeServer(h, LocalPlayer.Character) end)
+									task.wait()
+									pcall(function() hp.DropItemRemoteFunction:InvokeServer(h, CFrame.new(root.Position + Vector3.new(0, -2000, 0)), Vector3.zero) end)
+								end
+							end
+						end
+						task.wait()
+					end
+					conn:Disconnect()
+				end)
+				Library:Notify({ Title = "Rose", Description = "Anti Input Lag ON", Time = 2 })
+			else
+				antiInputActive = false
+				Library:Notify({ Title = "Rose", Description = "Anti Input Lag OFF", Time = 2 })
+			end
+		end,
+	})
+
+	-- Anti-AntiKick (XOCU)
+	local antiAntiKickBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Anti-AntiKick (XOCU)" })
+	antiAntiKickBox:AddToggle("AntiAntiKick", {
+		Text = "Enable Anti-AntiKick",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.antiAntiKick = enabled
+			if enabled then
+				task.spawn(function()
+					while State.runtime.antiAntiKick do
+						task.wait()
+						local target = Players:FindFirstChild(State.runtime.target or "")
+						if not target then continue end
+						local inv = workspace:FindFirstChild(target.Name .. "SpawnedInToys")
+						if not inv then continue end
+						local root = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+						local firePart = root and root:FindFirstChild("FirePlayerPart")
+						if not firePart then continue end
+						for _, v in ipairs(inv:GetChildren()) do
+							local sp = v:FindFirstChild("StickyPart")
+							if sp then
+								for _, part in ipairs(v:GetChildren()) do
+									if part:IsA("BasePart") then
+										part.CanCollide = false; part.CanTouch = false; part.CanQuery = false
+									end
+								end
+								local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+								local so = ge and ge:FindFirstChild("SetNetworkOwner")
+								if so and not (sp:FindFirstChild("PartOwner") and sp.PartOwner.Value == LocalPlayer.Name) then
+									pcall(function() so:FireServer(sp, sp.CFrame) end)
+								end
+							end
+						end
+					end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Anti-AntiKick ON", Time = 2 })
+			else
+				Library:Notify({ Title = "Rose", Description = "Anti-AntiKick OFF", Time = 2 })
+			end
+		end,
+	})
+
+	-- Cosmetics (XOCU)
+	local cosBox = Tabs.Visual:AddGroupbox({ Side = "Left", Name = "Cosmetics (XOCU)" })
+	cosBox:AddToggle("Headless", {
+		Text = "Headless",
+		Default = false,
+		Callback = function(enabled)
+			local char = LocalPlayer.Character; if not char then return end
+			local head = char:FindFirstChild("Head"); if not head then return end
+			if enabled then
+				for _, o in ipairs(head:GetChildren()) do if o:IsA("Decal") or o:IsA("SpecialMesh") then o:Destroy() end end
+				local m = Instance.new("SpecialMesh"); m.MeshType = Enum.MeshType.FileMesh; m.MeshId = "rbxassetid://134082579"; m.TextureId = "rbxassetid://134082627"; m.Scale = Vector3.new(1.25, 1.25, 1.25); m.Name = "PhantomHeadlessMesh"; m.Parent = head
+				head.Transparency = 0.1
+			else
+				local m = head:FindFirstChild("PhantomHeadlessMesh"); if m then m:Destroy() end
+				head.Transparency = 0
+			end
+		end,
+	})
+	cosBox:AddToggle("Korblox", {
+		Text = "Korblox Leg",
+		Default = false,
+		Callback = function(enabled)
+			local char = LocalPlayer.Character; if not char then return end
+			local rleg = char:FindFirstChild("Right Leg") or char:FindFirstChild("RightLowerLeg")
+			if not rleg then return end
+			if enabled then
+				local fake = Instance.new("Part"); fake.Name = "PhantomKorbloxLeg"; fake.Size = rleg.Size; fake.CFrame = rleg.CFrame; fake.Anchored = false; fake.CanCollide = false; fake.Transparency = 0; fake.BrickColor = BrickColor.new("Really black"); fake.Material = Enum.Material.Plastic; fake.Parent = char
+				local mesh = Instance.new("SpecialMesh"); mesh.MeshType = Enum.MeshType.FileMesh; mesh.MeshId = "rbxassetid://101851696"; mesh.TextureId = "rbxassetid://101851254"; mesh.Scale = Vector3.new(1, 1, 1); mesh.Parent = fake
+				local weld = Instance.new("WeldConstraint"); weld.Part0 = rleg; weld.Part1 = fake; weld.Parent = rleg
+				rleg.Transparency = 1
+			else
+				local fake = char:FindFirstChild("PhantomKorbloxLeg"); if fake then fake:Destroy() end
+				rleg.Transparency = 0
+			end
+		end,
+	})
+
+	-- Typing Sound (XOCU)
+	local typingBox = Tabs.Visual:AddGroupbox({ Side = "Right", Name = "Typing Sound (XOCU)" })
+	local typingSound = Instance.new("Sound")
+	typingSound.SoundId = "rbxassetid://72486459002567"
+	typingSound.Looped = true
+	typingSound.Volume = 1
+	typingSound.Parent = game:GetService("SoundService")
+	local typingEnabled = true
+	local typingVolume = 100
+	typingBox:AddToggle("TypingSound", { Text = "Typing Sound", Default = true, Callback = function(v) typingEnabled = v; if not v then typingSound:Stop() end end })
+	typingBox:AddSlider("TypingVolume", { Text = "Volume", Default = 100, Min = 0, Max = 100, Rounding = 0, Callback = function(v) typingVolume = v; typingSound.Volume = v / 100 end })
+	game:GetService("UserInputService").TextBoxFocused:Connect(function() if typingEnabled then if not typingSound.IsPlaying then typingSound:Play() end end end)
+	game:GetService("UserInputService").TextBoxFocusReleased:Connect(function() typingSound:Stop() end)
+
+	-- Barrier Break (XOCU)
+	local barrierBox = Tabs.Misc and Tabs.Misc:AddGroupbox({ Side = "Left", Name = "Barrier (XOCU)" }) or nil
+	if barrierBox then
+		barrierBox:AddButton({ Text = "Break House Barriers", Func = function()
+			for _, plot in ipairs(workspace:FindFirstChild("Plots"):GetChildren()) do
+				local barrier = plot:FindFirstChild("Barrier")
+				if barrier then
+					for _, part in ipairs(barrier:GetChildren()) do
+						if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
+					end
+				end
+			end
+			Library:Notify({ Title = "Rose", Description = "Barriers broken", Time = 2 })
+		end })
+	end
 
 	local desyncBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Desync" })
 	local desyncActive = false
