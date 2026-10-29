@@ -6193,19 +6193,28 @@ do
 			if not ge then return end
 			local so = ge:FindFirstChild("SetNetworkOwner")
 			print("[Rose Debug] SetNetworkOwner found: " .. tostring(so ~= nil))
+			local cg = ge:FindFirstChild("CreateGrabLine")
+			local dg = ge:FindFirstChild("DestroyGrabLine")
 			if so then
 				for i = 1, 3 do
 					local ok = pcall(function() so:FireServer(tr, tr.CFrame) end)
-					print("[Rose Debug] FireServer #" .. i .. " ok: " .. tostring(ok))
+					print("[Rose Debug] SetNetworkOwner #" .. i .. " ok: " .. tostring(ok))
 				end
+			end
+			if cg then
+				local ok = pcall(function() cg:FireServer(tr, Vector3.new(0, 0, 0), tr.Position, false) end)
+				print("[Rose Debug] CreateGrabLine ok: " .. tostring(ok))
+			end
+			task.wait(0.1)
+			if dg then
+				local ok = pcall(function() dg:FireServer(tr) end)
+				print("[Rose Debug] DestroyGrabLine ok: " .. tostring(ok))
 			end
 			pcall(function()
 				th.PlatformStand = true
 				tr.AssemblyLinearVelocity = Vector3.new(0, 200, 0)
 				print("[Rose Debug] Velocity applied")
 			end)
-			local dg = ge:FindFirstChild("DestroyGrabLine")
-			if dg then pcall(function() dg:FireServer(tr); print("[Rose Debug] DestroyGrabLine fired") end) end
 			Library:Notify({ Title = "Rose Debug", Description = "Check console (F9)", Time = 3 })
 		end,
 	})
