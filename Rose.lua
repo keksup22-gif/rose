@@ -132,6 +132,7 @@ State.runtime.espOn = false
 State.runtime.gucciAntiGrab = false
 State.runtime.antiBlobmanAura = false
 State.runtime.shurikenMinefield = false
+State.runtime.autoExpEnabled = false
 State.runtime.antiAntiKick = false
 State.runtime.antiBlobmanAura = false
 State.runtime.autoAttacker = false
@@ -6754,7 +6755,7 @@ do
 	-- Typing Sound (XOCU)
 	local typingBox = Tabs.Visual:AddGroupbox({ Side = "Right", Name = "Typing Sound (XOCU)" })
 	local typingSound = Instance.new("Sound")
-	typingSound.SoundId = "rbxassetid://72486459002567"
+	typingSound.SoundId = "rbxassetid://9116149587"
 	typingSound.Looped = true
 	typingSound.Volume = 1
 	typingSound.Parent = game:GetService("SoundService")
@@ -6780,6 +6781,136 @@ do
 			Library:Notify({ Title = "Rose", Description = "Barriers broken", Time = 2 })
 		end })
 	end
+
+	-- Auto Explosion (XOCU)
+	local autoExpBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Auto Explosion (XOCU)" })
+	local autoExpEnabled = false
+	local autoExpType = "BombMissile"
+	local autoExpAmount = 3
+	local autoExpTask = nil
+
+	autoExpBox:AddDropdown("ExplosionType", {
+		Values = { "Missile", "Firework", "Void", "Balloon", "Small Present", "Big Present" },
+		Default = "Missile",
+		Text = "Explosion Type",
+		Callback = function(v)
+			local typeMap = { Missile = "BombMissile", Firework = "FireworkMissile", Void = "BombDarkMatter", Balloon = "BombBalloon", ["Small Present"] = "PresentSmall", ["Big Present"] = "PresentBig" }
+			autoExpType = typeMap[v] or "BombMissile"
+		end,
+	})
+
+	autoExpBox:AddSlider("ExpAmount", { Text = "Bomb Amount", Default = 3, Min = 1, Max = 10, Rounding = 0, Callback = function(v) autoExpAmount = v end })
+
+	autoExpBox:AddToggle("AutoExplosion", {
+		Text = "Auto Explosion (loop)",
+		Default = false,
+		Callback = function(enabled)
+			autoExpEnabled = enabled
+			if enabled then
+				local target = Players:FindFirstChild(State.runtime.target or "")
+				if not target then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); autoExpEnabled = false; return end
+				autoExpTask = task.spawn(function()
+					local hitboxMap = { BombMissile = "PartHitDetector", BombDarkMatter = "PartHitDetector", FireworkMissile = "PartHitDetector", BombBalloon = "Balloon", PresentBig = "Box", PresentSmall = "Box" }
+					local setupMap = { BombMissile = "Body", BombDarkMatter = "Pyramid", FireworkMissile = "Hitbox", BombBalloon = "Balloon", PresentBig = "Box", PresentSmall = "Box" }
+					while autoExpEnabled do
+						local targetPlayer = Players:FindFirstChild(State.runtime.target or "")
+						local targetHRP = targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+						local targetHum = targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+						if not targetHRP or not targetHum or targetHum.Health <= 0 then task.wait(0.5); continue end
+						-- spawn bombs
+						local bombs = {}
+						local spawnToy = ReplicatedStorage:FindFirstChild("MenuToys") and ReplicatedStorage.MenuToys:FindFirstChild("SpawnToyRemoteFunction")
+						local buyToy = ReplicatedStorage:FindFirstChild("MenuToys") and ReplicatedStorage.MenuToys:FindFirstChild("BuyToyRemoteFunction")
+						local destroyToy = ReplicatedStorage:FindFirstChild("MenuToys") and ReplicatedStorage.MenuToys:FindFirstChild("DestroyToy")
+						local spawnCount = 0
+						while #bombs < autoExpAmount and autoExpEnabled and spawnCount < 20 do
+							local char = LocalPlayer.Character
+							if char and char:FindFirstChild("HumanoidRootPart") then
+								pcall(function()
+									if spawnToy then spawnToy:InvokeServer(autoExpType, CFrame.new(char.HumanoidRootPart.Position + Vector3.new(0, 5, 0)), Vector3.zero) end
+									if buyToy then buyToy:InvokeServer(autoExpType) end
+								end)
+							end
+							spawnCount = spawnCount + 1
+							task.wait(0.1)
+							local toys = Workspace:FindFirstChild(LocalPlayer.Name .. "SpawnedInToys")
+							if toys then
+								for _, t in ipairs(toys:GetChildren()) do
+									if t.Name == autoExpType then table.insert(bombs, t) end
+								end
+							end
+						end
+						task.wait(0.2)
+						-- setup bombs
+						for _, bomb in ipairs(bombs) do
+							if not autoExpEnabled then break end
+							local hitPart = bomb:FindFirstChild(setupMap[autoExpType])
+							if hitPart then
+								local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+								local so = ge and ge:FindFirstChild("SetNetworkOwner")
+								if so then pcall(function() so:FireServer(hitPart, hitPart.CFrame) end) end
+								task.wait(0.05)
+								pcall(function()
+									for _, v in ipairs(bomb.PrimaryPart:GetChildren()) do
+										if v:IsA("BodyVelocity") or v.Name == "Stable" then v:Destroy() end
+									end
+									local bv = Instance.new("BodyVelocity")
+									bv.Velocity = Vector3.zero
+									bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+									bv.Name = "Stable"
+									bv.Parent = bomb.PrimaryPart
+									bomb:PivotTo(CFrame.new(math.random(-500, 500), 10000, math.random(-500, 500)))
+								end)
+							end
+							task.wait(0.05)
+						end
+						task.wait(0.2)
+						-- explode
+						local targetHRP2 = targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+						if targetHRP2 then
+							local bombs2 = {}
+							local toys2 = Workspace:FindFirstChild(LocalPlayer.Name .. "SpawnedInToys")
+							if toys2 then
+								for _, t in ipairs(toys2:GetChildren()) do
+									if t.Name == autoExpType then table.insert(bombs2, t) end
+								end
+							end
+							for _, bomb in ipairs(bombs2) do
+								if not autoExpEnabled then break end
+								local hitbox = bomb:FindFirstChild(hitboxMap[autoExpType])
+								if hitbox then
+									local targetPos = targetHRP2.Position
+									local BombEvents = ReplicatedStorage:FindFirstChild("BombEvents")
+									local bombExplode = BombEvents and BombEvents:FindFirstChild("BombExplode")
+									if bombExplode then
+										pcall(function()
+											bombExplode:FireServer({ Hitbox = hitbox, PositionPart = targetHRP2 }, targetPos)
+										end)
+									end
+								end
+								task.wait(0.01)
+							end
+						end
+						task.wait(0.15)
+						-- cleanup
+						if destroyToy then
+							local toys3 = Workspace:FindFirstChild(LocalPlayer.Name .. "SpawnedInToys")
+							if toys3 then
+								for _, t in ipairs(toys3:GetChildren()) do
+									if t.Name == autoExpType then pcall(function() destroyToy:FireServer(t) end) end
+								end
+							end
+						end
+						task.wait(0.5)
+					end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Auto Explosion ON", Time = 2 })
+			else
+				autoExpEnabled = false
+				Library:Notify({ Title = "Rose", Description = "Auto Explosion OFF", Time = 2 })
+			end
+		end,
+	})
 
 	local desyncBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Desync" })
 	local desyncActive = false
