@@ -5392,6 +5392,95 @@ do
 		end,
 	})
 
+	kickBox:AddToggle("SpamKick", {
+		Text = "Spam Kick (Strong / Krampus)",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.spamKick = enabled
+
+			if enabled then
+				if not State.runtime.target or State.runtime.target == "" then
+					Library:Notify({ Title = "Rose", Description = "Select target first", Time = 3 })
+					if Toggles.SpamKick then Toggles.SpamKick:SetValue(false) end
+					return
+				end
+
+				task.spawn(function()
+					local ge = GetGrabEvents()
+					if not ge then return end
+					local setNO = ge:FindFirstChild("SetNetworkOwner")
+					if not setNO then return end
+
+					while State.runtime.spamKick and State.runtime.target and State.runtime.target ~= "" do
+						local target = Players:FindFirstChild(State.runtime.target)
+						if not target or not target.Character then
+							task.wait(0.5)
+							continue
+						end
+
+						local character = LocalPlayer.Character
+						local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+						local targetCharacter = target.Character
+						local targetRootPart = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
+						local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
+
+						if not (rootPart and targetRootPart and targetHumanoid and targetHumanoid.Health > 0) then
+							task.wait(0.3)
+							continue
+						end
+
+						rootPart.CFrame = targetRootPart.CFrame * CFrame.new(0, -20, 0)
+
+						pcall(function()
+							targetHumanoid.PlatformStand = true
+							targetHumanoid.Sit = true
+						end)
+
+						for _, child in ipairs(targetRootPart:GetChildren()) do
+							if child:IsA("AlignPosition") or child:IsA("AlignOrientation") then
+								pcall(function() child:Destroy() end)
+							end
+						end
+
+						local att = Instance.new("Attachment", targetRootPart)
+						local wAtt = Instance.new("Attachment", workspace.Terrain)
+						local ap = Instance.new("AlignPosition")
+						ap.Attachment0 = att
+						ap.Attachment1 = wAtt
+						ap.RigidityEnabled = true
+						ap.MaxForce = 9e9
+						ap.MaxVelocity = 9e9
+						ap.Responsiveness = 9e9
+						ap.Parent = targetRootPart
+
+						local ao = Instance.new("AlignOrientation")
+						ao.Attachment0 = att
+						ao.Attachment1 = wAtt
+						ao.MaxTorque = 9e9
+						ao.MaxAngularVelocity = 9e9
+						ao.Responsiveness = 9e9
+						ao.Parent = targetRootPart
+
+						for i = 1, 8 do
+							if not State.runtime.spamKick then break end
+							pcall(function()
+								for j = 1, 3 do setNO:FireServer(targetRootPart, targetRootPart.CFrame) end
+							end)
+							local dg = ge:FindFirstChild("DestroyGrabLine")
+							if dg then pcall(function() dg:FireServer(targetRootPart) end) end
+							pcall(function() wAtt.Position = (rootPart.CFrame * CFrame.new(0, 25, 0)).Position end)
+							task.wait(0.05)
+						end
+
+						pcall(function() ap:Destroy(); ao:Destroy(); att:Destroy(); wAtt:Destroy() end)
+						pcall(function() targetRootPart.AssemblyLinearVelocity = Vector3.zero end)
+						task.wait(0.3)
+					end
+				end)
+			end
+		end,
+	})
+
 	kickBox:AddSlider("KickHeight", {
 		Text = "Kick Height",
 		Default = 22,
