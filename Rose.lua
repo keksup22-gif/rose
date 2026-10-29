@@ -130,6 +130,7 @@ State.runtime.autoSit = false
 State.runtime.traceOn = false
 State.runtime.espOn = false
 State.runtime.gucciAntiGrab = false
+State.runtime.shurikenMinefield = false
 State.runtime.autoAttacker = false
 State.runtime.pktNotify = true
 State.runtime.pktCooldown = false
@@ -5693,6 +5694,65 @@ do
 				end)
 			end
 			Library:Notify({ Title = "Rose", Description = "Ground kick (shuriken) on " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddToggle("ShurikenMinefield", {
+		Text = "Shuriken Minefield (kick on touch)",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.shurikenMinefield = enabled
+			if enabled then
+				task.spawn(function()
+					local spawnToy = ReplicatedStorage:FindFirstChild("MenuToys") and ReplicatedStorage.MenuToys:FindFirstChild("SpawnToyRemoteFunction")
+					if not spawnToy then Library:Notify({ Title = "Rose", Description = "SpawnToy not found", Time = 2 }); return end
+					while State.runtime.shurikenMinefield do
+						local target = Players:FindFirstChild(State.runtime.target or "")
+						local pos = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and target.Character.HumanoidRootPart.Position or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position)
+						if pos then
+							-- spawn shuriken on ground
+							pcall(function()
+								spawnToy:InvokeServer("NinjaShuriken", CFrame.new(pos.X, pos.Y - 3, pos.Z), Vector3.zero)
+							end)
+							task.wait(0.3)
+							local toys = Workspace:FindFirstChild(LocalPlayer.Name .. "SpawnedInToys")
+							local shuriken = toys and toys:FindFirstChild("NinjaShuriken")
+							if shuriken then
+								local sp = shuriken:FindFirstChild("SoundPart") or shuriken:FindFirstChild("Hitbox") or shuriken:FindFirstChildWhichIsA("BasePart")
+								if sp then
+									-- claim ownership
+									local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+									local so = ge and ge:FindFirstChild("SetNetworkOwner")
+									if so then pcall(function() so:FireServer(sp, sp.CFrame) end) end
+									-- make it a mine: when touched, kick
+									sp.Touched:Connect(function(hit)
+										if not State.runtime.shurikenMinefield then return end
+										local char = hit:FindFirstAncestorOfClass("Model")
+										local plr = char and Players:GetPlayerFromCharacter(char)
+										if plr and plr ~= LocalPlayer then
+											local hrp = char:FindFirstChild("HumanoidRootPart")
+											local hum = char:FindFirstChildOfClass("Humanoid")
+											if hrp and hum and hum.Health > 0 then
+												pcall(function()
+													hum.PlatformStand = true
+													hrp.AssemblyLinearVelocity = Vector3.new(0, -200, 0)
+												end)
+												local ge2 = ReplicatedStorage:FindFirstChild("GrabEvents")
+												local dg = ge2 and ge2:FindFirstChild("DestroyGrabLine")
+												if dg then pcall(function() dg:FireServer(hrp) end) end
+											end
+										end
+									end)
+								end
+							end
+						end
+						task.wait(0.5)
+					end
+				end)
+				Library:Notify({ Title = "Rose", Description = "Shuriken Minefield ON", Time = 2 })
+			else
+				Library:Notify({ Title = "Rose", Description = "Shuriken Minefield OFF", Time = 2 })
+			end
 		end,
 	})
 
