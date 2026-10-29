@@ -115,6 +115,7 @@ local State = {
 State.runtime.target = nil
 State.runtime.kick = false
 State.runtime.blobKick = false
+State.runtime.resonanceLoopKick = false
 State.runtime.kickHeight = 22
 State.runtime.grabDelay = 0.05
 State.runtime.rogdoll = false
@@ -1299,6 +1300,7 @@ BlobKick = function(playerName)
 	end
 
 	State.runtime.blobKick = false
+State.runtime.resonanceLoopKick = false
 	Library:Notify({ Title = "Rose", Description = "Blob Kick OFF", Time = 2 })
 end
 
@@ -6015,6 +6017,142 @@ do
 		end,
 	})
 
+	blobMethodsBox:AddToggle("ResonanceLoopKick", {
+		Text = "Loop Kick (Resonance)",
+		Default = false,
+		Callback = function(enabled)
+			State.runtime.resonanceLoopKick = enabled
+
+			if enabled then
+				if not blobTarget or blobTarget == "" then
+					Library:Notify({ Title = "Rose", Description = "Select player", Time = 2 })
+					if Toggles.ResonanceLoopKick then Toggles.ResonanceLoopKick:SetValue(false) end
+					return
+				end
+
+				task.spawn(function()
+					local function getChar(p) return p and p.Character end
+					local function getRoot(c) return c and (c:FindFirstChild("HumanoidRootPart") or c:FindFirstChild("Torso")) end
+					local function getHum(c) return c and c:FindFirstChildOfClass("Humanoid") end
+					local function SNO(part)
+						local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+						local so = ge and ge:FindFirstChild("SetNetworkOwner")
+						if so and part then pcall(function() so:FireServer(part, part.CFrame) end) end
+					end
+					local function getBlobComps(blob)
+						local sc = blob:FindFirstChild("BlobmanSeatAndOwnerScript")
+						return {
+							CreatureGrab = sc and sc:FindFirstChild("CreatureGrab"),
+							CreatureDrop = sc and sc:FindFirstChild("CreatureDrop"),
+							CreatureRelease = sc and sc:FindFirstChild("CreatureRelease"),
+							RightWeld = blob:FindFirstChild("RightDetector") and blob.RightDetector:FindFirstChild("RightWeld"),
+							RightOri = blob:FindFirstChild("RightDetector") and blob.RightDetector:FindFirstChild("RightAlignOrientation"),
+							LeftWeld = blob:FindFirstChild("LeftDetector") and blob.LeftDetector:FindFirstChild("LeftWeld"),
+						}
+					end
+					local function Teleport(part, cf)
+						if part then pcall(function() part.CFrame = cf; part.AssemblyLinearVelocity = Vector3.zero end) end
+					end
+					local function CreateAlign(part)
+						local att = part:FindFirstChild("RootAttachment") or Instance.new("Attachment", part)
+						att.Name = "RootAttachment"
+						local ap = Instance.new("AlignPosition"); ap.Name = "RoseAP"; ap.Mode = Enum.PositionAlignmentMode.OneAttachment
+						ap.ApplyAtCenterOfMass = true; ap.MaxForce = 1e9; ap.Responsiveness = 200; ap.Attachment0 = att; ap.Parent = part
+						local ao = Instance.new("AlignOrientation"); ao.Name = "RoseAO"; ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+						ao.MaxTorque = 1e9; ao.Responsiveness = 200; ao.Attachment0 = att; ao.Parent = part
+						return ap, ao
+					end
+					local function Grab(part)
+						local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+						local cg = ge and ge:FindFirstChild("CreateGrabLine")
+						if cg and part then pcall(function() cg:FireServer(part, Vector3.zero, part.Position, false) end) end
+					end
+					local function RNO(part)
+						local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+						local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+						if dg and part then pcall(function() dg:FireServer(part) end) end
+					end
+					local function ToggleMotor6D(char, enabled)
+						for _, d in ipairs(char:GetDescendants()) do
+							if d:IsA("Motor6D") then pcall(function() d.Enabled = enabled end) end
+						end
+					end
+					local function RepositionLimbs(char)
+						for _, d in ipairs(char:GetDescendants()) do
+							if d:IsA("BasePart") and d.Name:find("Leg") or d.Name:find("Arm") then
+								pcall(function() d.CFrame = d.CFrame end)
+							end
+						end
+					end
+
+					while State.runtime.resonanceLoopKick do
+						local target = Players:FindFirstChild(blobTarget)
+						if not target or not target.Character then task.wait(0.5); continue end
+						local myChar = LocalPlayer.Character
+						local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+						local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+						local tChar = target.Character
+						local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+						local tHum = tChar and tChar:FindFirstChildOfClass("Humanoid")
+						if not (myRoot and myHum and tRoot and tHum and tHum.Health > 0) then task.wait(0.5); continue end
+						if not myHum.SeatPart then
+							-- need to be in blobman
+							local blob = workspace:FindFirstChild(LocalPlayer.Name .. "SpawnedInToys") and workspace[LocalPlayer.Name .. "SpawnedInToys"]:FindFirstChild("CreatureBlobman")
+							if blob and blob:FindFirstChild("VehicleSeat") then
+								repeat
+									myRoot.CFrame = blob.VehicleSeat.CFrame + Vector3.new(0, 1, 0)
+									blob.VehicleSeat:Sit(myHum)
+									task.wait()
+								until myHum.SeatPart == blob.VehicleSeat or not State.runtime.resonanceLoopKick
+							else
+								task.wait(1); continue
+							end
+						end
+						local blob = myHum.SeatPart and myHum.SeatPart.Parent
+						if not blob or blob.Name ~= "CreatureBlobman" then task.wait(0.5); continue end
+						local comps = getBlobComps(blob)
+						if not (comps.CreatureGrab and comps.CreatureDrop and comps.CreatureRelease and comps.RightWeld and comps.RightOri) then task.wait(0.5); continue end
+						comps.RightWeld.Enabled = false
+						comps.RightOri.Enabled = false
+						if SNO(tRoot) then
+							tHum.Sit = true
+							task.delay(0.5, function() pcall(function() tHum.Sit = false end) end)
+							local offset = CFrame.new(2, 5, -3)
+							local placeCF = myRoot.CFrame * offset
+							Teleport(tRoot, placeCF)
+							local ap, ao = CreateAlign(tRoot)
+							if ap then ap.Position = placeCF.Position end
+							task.delay(0.2, function()
+								Grab(tRoot)
+								RNO(tRoot)
+							end)
+							comps.CreatureDrop:FireServer(comps.RightWeld)
+							comps.CreatureDrop:FireServer(comps.LeftWeld)
+							task.wait(0.06)
+							local ra = tRoot:FindFirstChild("RootAttachment")
+							if ra then ra.Parent = myChar end
+							while State.runtime.resonanceLoopKick and tRoot.Parent and tHum.Health > 0 and not tHum.SeatPart do
+								task.spawn(function()
+									tHum.RequiresNeck = false
+									ToggleMotor6D(myChar, false)
+									RepositionLimbs(myChar)
+								end)
+								task.wait()
+							end
+							pcall(function() if ap and ap.Parent then ap:Destroy() end; if ao and ao.Parent then ao:Destroy() end end)
+							if ra and ra.Parent then ra.Parent = tRoot end
+							ToggleMotor6D(myChar, true)
+						end
+						task.wait(0.5)
+					end
+					Library:Notify({ Title = "Rose", Description = "Resonance Loop Kick OFF", Time = 2 })
+				end)
+			else
+				Library:Notify({ Title = "Rose", Description = "Resonance Loop Kick OFF", Time = 2 })
+			end
+		end,
+	})
+
 	blobMethodsBox:AddToggle("BlobAutoSit", {
 		Text = "Auto Sit Blobman",
 		Default = false,
@@ -6086,6 +6224,7 @@ do
 				return
 			end
 			State.runtime.blobKick = false
+State.runtime.resonanceLoopKick = false
 			State.runtime.loopKickBlob = false
 			task.wait(0.05)
 			if selectedMethod == "Kick" then
@@ -6104,6 +6243,7 @@ do
 		Text = "STOP",
 		Func = function()
 			State.runtime.blobKick = false
+State.runtime.resonanceLoopKick = false
 			State.runtime.loopKickBlob = false
 			pcall(function() BlobLock:Stop() end)
 			Library:Notify({ Title = "Rose", Description = "Stopped", Time = 2 })
