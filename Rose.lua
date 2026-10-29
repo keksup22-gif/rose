@@ -6824,11 +6824,9 @@ do
 			end
 		end,
 	})
-	platformBox:AddKeyPicker("PlatformTPKey", {
-		Text = "Platform TP Execute",
-		Default = "X",
-		NoUI = false,
-		Callback = function()
+	platformBox:AddButton({
+		Text = "Teleport to Platform",
+		Func = function()
 			if not platformActive or not platformPart then return end
 			local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 			if not root then return end
