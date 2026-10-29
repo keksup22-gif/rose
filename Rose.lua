@@ -6227,6 +6227,122 @@ do
 		end,
 	})
 
+	local autoDefBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Auto Defense (XOCU)" })
+	local autoDefMode = "Fling"
+	local autoDefActive = false
+	local autoDefConn = nil
+	local crazyline = false
+	local crazylineTask = nil
+
+	autoDefBox:AddDropdown("AutoDefMode", {
+		Values = { "Fling", "Kill", "Send to Heaven", "Kick", "Ragdoll", "Hell", "China", "GrabLine" },
+		Default = "Fling",
+		Text = "Attack Mode",
+		Callback = function(m) autoDefMode = m end,
+	})
+
+	local function getAttacker()
+		local char = LocalPlayer.Character
+		if not char or not char:FindFirstChild("Head") then return nil end
+		local owner = char.Head:FindFirstChild("PartOwner")
+		if not owner or not owner:IsA("StringValue") then return nil end
+		return Players:FindFirstChild(owner.Value)
+	end
+
+	local function performMode(attacker, mode)
+		if not attacker or not attacker.Character then return end
+		local root = attacker.Character:FindFirstChild("HumanoidRootPart")
+		if not root then return end
+		local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+		local so = ge and ge:FindFirstChild("SetNetworkOwner")
+		local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+		local cg = ge and ge:FindFirstChild("CreateGrabLine")
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		pcall(function()
+			if so then so:FireServer(root, root.CFrame) end
+			if dg then dg:FireServer(root) end
+			if mode == "Fling" then
+				local away = myRoot and (root.Position - myRoot.Position).Unit or Vector3.new(0, 0, 1)
+				away = Vector3.new(away.X, 0, away.Z) * 90000
+				local bv = Instance.new("BodyVelocity"); bv.Name = "RinneganFling"; bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = away; bv.P = 12500; bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			elseif mode == "Kill" then
+				local away = myRoot and (root.Position - myRoot.Position).Unit or Vector3.new(0, 0, 1)
+				away = Vector3.new(away.X, 0, away.Z) * 99999999999999
+				local bv = Instance.new("BodyVelocity"); bv.Name = "RinneganFling"; bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = away; bv.P = 12500; bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			elseif mode == "Send to Heaven" then
+				root.CFrame = CFrame.new(0, 200, 0)
+				local bv = Instance.new("BodyVelocity"); bv.Name = "RinneganHeaven"; bv.MaxForce = Vector3.new(0, math.huge, 0); bv.Velocity = Vector3.new(0, 200, 0); bv.P = 12500; bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			elseif mode == "Kick" then
+				root.CFrame = CFrame.new(0, 999999999999, 0)
+				local bv = Instance.new("BodyVelocity"); bv.Name = "RinneganHeaven"; bv.MaxForce = Vector3.new(0, math.huge, 0); bv.Velocity = Vector3.new(0, 99999999999999, 0); bv.P = 12500; bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			elseif mode == "Ragdoll" then
+				local bv = Instance.new("BodyVelocity"); bv.Name = "RinneganSpy"; bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = Vector3.new(0, -20, 0); bv.P = 12500; bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+				local hum = attacker.Character:FindFirstChildOfClass("Humanoid"); if hum then hum.PlatformStand = true end
+			elseif mode == "Hell" then
+				for _, part in ipairs(attacker.Character:GetDescendants()) do if part:IsA("BasePart") and not part.Anchored then part.CanCollide = false end end
+				local bv = Instance.new("BodyVelocity"); bv.Name = "RinneganSpy"; bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = Vector3.new(0, -100000000, 0); bv.P = 12500; bv.Parent = root
+				game:GetService("Debris"):AddItem(bv, 0.01)
+			elseif mode == "China" then
+				root.CFrame = CFrame.new(591, 153, -101)
+			elseif mode == "GrabLine" then
+				if not crazylineTask then
+					crazyline = true
+					crazylineTask = task.spawn(function()
+						while crazyline do
+							local char = LocalPlayer.Character
+							if char then
+								local head = char:FindFirstChild("Head")
+								if head then
+									local owner = head:FindFirstChild("PartOwner")
+									if owner and owner:IsA("StringValue") then
+										local att = Players:FindFirstChild(owner.Value)
+										if att and att.Character then
+											local aHead = att.Character:FindFirstChild("Head")
+											local aHRP = att.Character:FindFirstChild("HumanoidRootPart")
+											if aHead and aHRP and cg then
+												for i = 1, 10 do pcall(function() cg:FireServer(aHead, aHead.CFrame) end) end
+												for i = 1, 10 do pcall(function() cg:FireServer(aHRP, aHRP.CFrame) end) end
+											end
+										end
+									end
+								end
+							end
+							task.wait(0.01)
+						end
+					end)
+				end
+			end
+		end)
+	end
+
+	autoDefBox:AddToggle("AutoDefense", {
+		Text = "Auto Defense (on grab)",
+		Default = false,
+		Callback = function(enabled)
+			autoDefActive = enabled
+			if enabled then
+				if autoDefConn then autoDefConn:Disconnect() end
+				autoDefConn = RunService.Heartbeat:Connect(function()
+					if not autoDefActive then return end
+					local attacker = getAttacker()
+					if not attacker then return end
+					performMode(attacker, autoDefMode)
+				end)
+				Library:Notify({ Title = "Rose", Description = "Auto Defense ON", Time = 2 })
+			else
+				if autoDefConn then autoDefConn:Disconnect(); autoDefConn = nil end
+				crazyline = false
+				if crazylineTask then pcall(task.cancel, crazylineTask); crazylineTask = nil end
+				Library:Notify({ Title = "Rose", Description = "Auto Defense OFF", Time = 2 })
+			end
+		end,
+	})
+
 	local desyncBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Desync" })
 	local desyncActive = false
 	local desyncConn = nil
