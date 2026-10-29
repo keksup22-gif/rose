@@ -5774,6 +5774,56 @@ do
 		end,
 	})
 
+	local desyncBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Desync" })
+	local desyncActive = false
+	local desyncConn = nil
+
+	desyncBox:AddToggle("Desync", {
+		Text = "Desync (client-side)",
+		Default = false,
+		Callback = function(enabled)
+			desyncActive = enabled
+			local character = LocalPlayer.Character
+			local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+			if enabled then
+				if rootPart then
+					-- desync: push character far on client, server stays
+					local saved = rootPart.CFrame
+					rootPart.CFrame = saved + Vector3.new(0, 1000, 0)
+				end
+				Library:Notify({ Title = "Rose", Description = "Desync ON", Time = 2 })
+			else
+				Library:Notify({ Title = "Rose", Description = "Desync OFF", Time = 2 })
+			end
+		end,
+	})
+
+	desyncBox:AddButton({
+		Text = "Desync Kick",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local tr = target.Character:FindFirstChild("HumanoidRootPart")
+			local th = target.Character:FindFirstChildOfClass("Humanoid")
+			if not tr or not th then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			if so then for i = 1, 10 do pcall(function() so:FireServer(tr, tr.CFrame) end) end end
+			-- desync: teleport locally without server sync
+			local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				local saved = root.CFrame
+				root.CFrame = tr.CFrame * CFrame.new(0, 0, 2)
+				task.wait(0.1)
+				root.CFrame = saved
+			end
+			pcall(function() th.PlatformStand = true; tr.AssemblyLinearVelocity = Vector3.new(0, 200, 0) end)
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			if dg then pcall(function() dg:FireServer(tr) end) end
+			Library:Notify({ Title = "Rose", Description = "Desync kicked " .. target.Name, Time = 2 })
+		end,
+	})
+
 	local ragdollBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Ragdoll" })
 
 	ragdollBox:AddToggle("Ragdoll", {
