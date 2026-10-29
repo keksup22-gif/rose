@@ -5774,6 +5774,68 @@ do
 		end,
 	})
 
+	local pclKickBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "PCLD Kick" })
+	pclKickBox:AddButton({
+		Text = "PCLD Break Kick",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local tr = target.Character:FindFirstChild("HumanoidRootPart")
+			local th = target.Character:FindFirstChildOfClass("Humanoid")
+			if not tr or not th then return end
+			-- break opponent's PCLD parts
+			for _, obj in ipairs(target.Character:GetDescendants()) do
+				if obj.Name:lower():find("playercharacterlocationdetector") or obj.Name:lower():find("partesp") then
+					local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+					local so = ge and ge:FindFirstChild("SetNetworkOwner")
+					if so then pcall(function() so:FireServer(obj, obj.CFrame) end) end
+					pcall(function() obj:Destroy() end)
+				end
+			end
+			-- also check spawned toys
+			local toys = Workspace:FindFirstChild(target.Name .. "SpawnedInToys")
+			if toys then
+				for _, c in ipairs(toys:GetDescendants()) do
+					if c.Name:lower():find("playercharacterlocationdetector") or c.Name:lower():find("partesp") then
+						pcall(function() c:Destroy() end)
+					end
+				end
+			end
+			task.wait(0.2)
+			-- kick
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			if so then for i = 1, 5 do pcall(function() so:FireServer(tr, tr.CFrame) end) end end
+			pcall(function() th.PlatformStand = true; tr.AssemblyLinearVelocity = Vector3.new(0, 200, 0) end)
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			if dg then pcall(function() dg:FireServer(tr) end) end
+			Library:Notify({ Title = "Rose", Description = "PCLD Break Kick on " .. target.Name, Time = 2 })
+		end,
+	})
+
+	pclKickBox:AddButton({
+		Text = "Break Opponent PCLD",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local count = 0
+			for _, obj in ipairs(target.Character:GetDescendants()) do
+				if obj.Name:lower():find("playercharacterlocationdetector") or obj.Name:lower():find("partesp") then
+					pcall(function() obj:Destroy() end); count = count + 1
+				end
+			end
+			local toys = Workspace:FindFirstChild(target.Name .. "SpawnedInToys")
+			if toys then
+				for _, c in ipairs(toys:GetDescendants()) do
+					if c.Name:lower():find("playercharacterlocationdetector") or c.Name:lower():find("partesp") then
+						pcall(function() c:Destroy() end); count = count + 1
+					end
+				end
+			end
+			Library:Notify({ Title = "Rose", Description = "Broke " .. count .. " PCLD parts", Time = 2 })
+		end,
+	})
+
 	local desyncBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Desync" })
 	local desyncActive = false
 	local desyncConn = nil
