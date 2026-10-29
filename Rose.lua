@@ -5775,6 +5775,44 @@ do
 	})
 
 	local pclKickBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "PCLD Kick" })
+
+	pclKickBox:AddButton({
+		Text = "PCLD-Independent Kick",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local tr = target.Character:FindFirstChild("HumanoidRootPart")
+			local th = target.Character:FindFirstChildOfClass("Humanoid")
+			if not tr or not th then return end
+			-- does NOT rely on PSLD: uses direct HRP velocity + ownership spam
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			if so then for i = 1, 10 do pcall(function() so:FireServer(tr, tr.CFrame) end) end end
+			pcall(function()
+				th.PlatformStand = true
+				th.Sit = false
+				tr.Anchored = false
+				-- direct velocity (no PSLD needed)
+				tr.AssemblyLinearVelocity = Vector3.new(0, 250, 0)
+				tr.AssemblyAngularVelocity = Vector3.new(0, 50, 0)
+			end)
+			-- also apply align for stronger effect
+			local att = Instance.new("Attachment", tr)
+			local wAtt = Instance.new("Attachment", workspace.Terrain)
+			local ap = Instance.new("AlignPosition")
+			ap.Attachment0 = att; ap.Attachment1 = wAtt
+			ap.MaxForce = math.huge; ap.Responsiveness = 200; ap.Parent = tr
+			wAtt.WorldPosition = tr.Position + Vector3.new(0, 50, 0)
+			task.delay(0.5, function()
+				pcall(function() ap:Destroy(); att:Destroy(); wAtt:Destroy() end)
+				pcall(function() tr.AssemblyLinearVelocity = Vector3.zero end)
+			end)
+			local dg = ge and ge:FindFirstChild("DestroyGrabLine")
+			if dg then pcall(function() dg:FireServer(tr) end) end
+			Library:Notify({ Title = "Rose", Description = "PCLD-independent kick on " .. target.Name, Time = 2 })
+		end,
+		Tooltip = "Кикает без зависимости от PSLD (прямая velocity + align)",
+	})
 	pclKickBox:AddButton({
 		Text = "PCLD Break Kick",
 		Func = function()
