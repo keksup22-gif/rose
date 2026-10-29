@@ -6039,6 +6039,137 @@ do
 	})
 
 	kickBox:AddButton({
+		Text = "Kick Server (Resonance)",
+		Func = function()
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			if not ge then Library:Notify({ Title = "Rose", Description = "GrabEvents not found", Time = 3 }); return end
+			local setNO = ge:FindFirstChild("SetNetworkOwner")
+			local createGL = ge:FindFirstChild("CreateGrabLine")
+			local destroyGL = ge:FindFirstChild("DestroyGrabLine")
+			if not setNO then Library:Notify({ Title = "Rose", Description = "SetNetworkOwner not found", Time = 3 }); return end
+			-- need blobman
+			local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+			local seat = hum and hum.SeatPart
+			if not seat or not seat.Parent or seat.Parent.Name ~= "CreatureBlobman" then
+				Library:Notify({ Title = "Rose", Description = "Sit in Blobman first", Time = 3 }); return
+			end
+			local blob = seat.Parent
+			local sc = blob:FindFirstChild("BlobmanSeatAndOwnerScript")
+			local rd = blob:FindFirstChild("RightDetector")
+			local ld = blob:FindFirstChild("LeftDetector")
+			if not sc or not rd then Library:Notify({ Title = "Rose", Description = "Blob parts missing", Time = 3 }); return end
+			local rw = rd:FindFirstChild("RightWeld")
+			local lw = ld and ld:FindFirstChild("LeftWeld")
+			local cg = sc:FindFirstChild("CreatureGrab")
+			local cd = sc:FindFirstChild("CreatureDrop")
+			if not (rw and cg and cd) then Library:Notify({ Title = "Rose", Description = "Blob parts missing", Time = 3 }); return end
+			local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+
+			-- collect targets
+			local targets = {}
+			for _, p in ipairs(Players:GetPlayers()) do
+				if p ~= LocalPlayer and p.Character then
+					local tr = p.Character:FindFirstChild("HumanoidRootPart")
+					local th = p.Character:FindFirstChildOfClass("Humanoid")
+					if tr and th and th.Health > 0 then
+						local assembly = tr.AssemblyRootPart or tr
+						if not assembly.Massless and not th.SeatPart then
+							table.insert(targets, { player = p, root = tr, hum = th })
+						end
+					end
+				end
+			end
+			if #targets == 0 then Library:Notify({ Title = "Rose", Description = "No targets", Time = 3 }); return end
+
+			-- drop welds
+			pcall(function() cd:FireServer(rw) end)
+			if lw then pcall(function() cd:FireServer(lw) end) end
+			rw.Enabled = false
+			if lw then pcall(function() lw.Enabled = false end) end
+
+			-- release each target (take ownership)
+			for _, t in ipairs(targets) do
+				pcall(function()
+					for i = 1, 5 do setNO:FireServer(t.root, t.root.CFrame) end
+				end)
+				if destroyGL then pcall(function() destroyGL:FireServer(t.root) end) end
+			end
+			task.wait(0.2)
+
+			-- arrange in circle, 20 studs away, 5 up
+			local tbl17 = {}
+			local tbl16 = {}
+			for i, t in ipairs(targets) do
+				local cFrame2 = root.CFrame * CFrame.Angles(0, i / #targets * math.pi * 2, 0) * CFrame.new(0, 5, -20)
+				t.root.CFrame = cFrame2
+				-- teleport
+				pcall(function() t.root.CFrame = cFrame2; t.root.AssemblyLinearVelocity = Vector3.zero end)
+				-- create align
+				local att = Instance.new("Attachment", t.root)
+				local wAtt = Instance.new("Attachment", workspace.Terrain)
+				local ap = Instance.new("AlignPosition")
+				ap.Attachment0 = att; ap.Attachment1 = wAtt
+				ap.MaxForce = math.huge; ap.Responsiveness = 300; ap.Parent = t.root
+				local ao = Instance.new("AlignOrientation")
+				ao.Attachment0 = att; ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+				ao.MaxTorque = math.huge; ao.Responsiveness = 300; ao.Parent = t.root
+				wAtt.WorldPosition = cFrame2.Position
+				ao.CFrame = cFrame2 - cFrame2.Position
+				table.insert(tbl16, t)
+				table.insert(tbl17, ap)
+				table.insert(tbl17, ao)
+				table.insert(tbl17, att)
+				table.insert(tbl17, wAtt)
+			end
+
+			task.wait(0.25)
+
+			-- grab all
+			for _, t in ipairs(tbl16) do
+				if t.root.Parent then
+					if cg then pcall(function() cg:FireServer(t.root, Vector3.zero, t.root.Position, false) end) end
+					if destroyGL then pcall(function() destroyGL:FireServer(t.root) end) end
+					pcall(function() cg:FireServer(nil, t.root, rw) end)
+					if rd then pcall(function() cg:FireServer(rd, t.root, rw) end) end
+					if lw and ld then pcall(function() cg:FireServer(nil, t.root, lw) end) end
+					task.wait()
+				end
+			end
+			-- grab self
+			pcall(function() cg:FireServer(nil, root, rw) end)
+
+			-- hold 2.8s
+			local endTime = os.clock() + 2.8
+			while os.clock() < endTime do
+				for _, t in ipairs(tbl16) do
+					if t.root.Parent then
+						pcall(function()
+							t.root.CFrame = t.root.CFrame -- keep
+							t.root.AssemblyLinearVelocity = Vector3.zero
+						end)
+					end
+				end
+				RunService.Heartbeat:Wait()
+			end
+
+			-- cleanup
+			pcall(function()
+				rw.Attachment0 = nil; rw.Enabled = true
+				if lw then lw.Attachment0 = nil; lw.Enabled = true end
+			end)
+			for _, obj in ipairs(tbl17) do
+				if obj and obj.Parent then pcall(function() obj:Destroy() end) end
+			end
+			-- reset targets
+			for _, t in ipairs(tbl16) do
+				pcall(function() t.root.AssemblyLinearVelocity = Vector3.zero end)
+			end
+			Library:Notify({ Title = "Rose", Description = "Kick Server executed on " .. #tbl16 .. " players", Time = 4 })
+		end,
+	})
+
+	kickBox:AddButton({
 		Text = "Destroy Server",
 		Func = function()
 			task.spawn(function()
