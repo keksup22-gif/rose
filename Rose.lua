@@ -5578,6 +5578,81 @@ do
 	})
 
 	kickBox:AddButton({
+		Text = "Sky Kick (up)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local tr = target.Character:FindFirstChild("HumanoidRootPart")
+			local th = target.Character:FindFirstChildOfClass("Humanoid")
+			if not tr or not th then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			if so then for i = 1, 5 do pcall(function() so:FireServer(tr, tr.CFrame) end) end end
+			pcall(function() th.PlatformStand = true; tr.AssemblyLinearVelocity = Vector3.new(0, 500, 0) end)
+			Library:Notify({ Title = "Rose", Description = "Sky kicked " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
+		Text = "Void Kick (down)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local tr = target.Character:FindFirstChild("HumanoidRootPart")
+			local th = target.Character:FindFirstChildOfClass("Humanoid")
+			if not tr or not th then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			if so then for i = 1, 5 do pcall(function() so:FireServer(tr, tr.CFrame) end) end end
+			pcall(function() th.PlatformStand = true; tr.AssemblyLinearVelocity = Vector3.new(0, -500, 0) end)
+			Library:Notify({ Title = "Rose", Description = "Void kicked " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
+		Text = "Spin Kick",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local tr = target.Character:FindFirstChild("HumanoidRootPart")
+			local th = target.Character:FindFirstChildOfClass("Humanoid")
+			if not tr or not th then return end
+			local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+			local so = ge and ge:FindFirstChild("SetNetworkOwner")
+			if so then for i = 1, 5 do pcall(function() so:FireServer(tr, tr.CFrame) end) end end
+			pcall(function()
+				th.PlatformStand = true
+				for i = 1, 20 do
+					tr.CFrame = tr.CFrame * CFrame.Angles(0, math.rad(30), 0)
+					tr.AssemblyAngularVelocity = Vector3.new(0, 100, 0)
+					task.wait(0.05)
+				end
+				tr.AssemblyAngularVelocity = Vector3.zero
+			end)
+			Library:Notify({ Title = "Rose", Description = "Spin kicked " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
+		Text = "Multi Kick (all players)",
+		Func = function()
+			for _, p in ipairs(Players:GetPlayers()) do
+				if p ~= LocalPlayer and p.Character then
+					local tr = p.Character:FindFirstChild("HumanoidRootPart")
+					local th = p.Character:FindFirstChildOfClass("Humanoid")
+					if tr and th and th.Health > 0 then
+						local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+						local so = ge and ge:FindFirstChild("SetNetworkOwner")
+						if so then for i = 1, 3 do pcall(function() so:FireServer(tr, tr.CFrame) end) end end
+						pcall(function() th.PlatformStand = true; tr.AssemblyLinearVelocity = Vector3.new(0, 300, 0) end)
+					end
+				end
+			end
+			Library:Notify({ Title = "Rose", Description = "Multi kicked all", Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
 		Text = "Destroy Server",
 		Func = function()
 			task.spawn(function()
