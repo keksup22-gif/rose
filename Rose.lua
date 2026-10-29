@@ -6975,7 +6975,7 @@ do
 	})
 
 	-- Inf Jump handler
-	UserInputService.JumpRequest:Connect(function()
+	game:GetService("UserInputService").JumpRequest:Connect(function()
 		if State.runtime.infJump then
 			local char = LocalPlayer.Character
 			local hum = char and char:FindFirstChild("Humanoid")
