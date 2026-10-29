@@ -5653,6 +5653,50 @@ do
 	})
 
 	kickBox:AddButton({
+		Text = "Ground Kick (Shuriken)",
+		Func = function()
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local tr = target.Character:FindFirstChild("HumanoidRootPart")
+			local th = target.Character:FindFirstChildOfClass("Humanoid")
+			if not tr or not th then return end
+			local spawnToy = ReplicatedStorage:FindFirstChild("MenuToys") and ReplicatedStorage.MenuToys:FindFirstChild("SpawnToyRemoteFunction")
+			if not spawnToy then Library:Notify({ Title = "Rose", Description = "SpawnToy not found", Time = 2 }); return end
+			-- spawn shurikens on target and fling
+			for i = 1, 5 do
+				task.spawn(function()
+					pcall(function()
+						spawnToy:InvokeServer("NinjaShuriken", tr.CFrame * CFrame.new(0, 0, 0), Vector3.zero)
+					end)
+					task.wait(0.1)
+					local toys = Workspace:FindFirstChild(LocalPlayer.Name .. "SpawnedInToys")
+					local shuriken = toys and toys:FindFirstChild("NinjaShuriken")
+					if shuriken then
+						local sp = shuriken:FindFirstChild("SoundPart") or shuriken:FindFirstChild("Hitbox") or shuriken:FindFirstChildWhichIsA("BasePart")
+						if sp then
+							local ge = ReplicatedStorage:FindFirstChild("GrabEvents")
+							local so = ge and ge:FindFirstChild("SetNetworkOwner")
+							if so then pcall(function() so:FireServer(sp, sp.CFrame) end) end
+							pcall(function()
+								sp.CFrame = tr.CFrame
+								sp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+								th.PlatformStand = true
+								tr.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+							end)
+							task.wait(0.05)
+							pcall(function()
+								sp.CFrame = tr.CFrame * CFrame.new(0, -5, 0)
+								tr.AssemblyLinearVelocity = Vector3.new(0, -100, 0)
+							end)
+						end
+					end
+				end)
+			end
+			Library:Notify({ Title = "Rose", Description = "Ground kick (shuriken) on " .. target.Name, Time = 2 })
+		end,
+	})
+
+	kickBox:AddButton({
 		Text = "Destroy Server",
 		Func = function()
 			task.spawn(function()
