@@ -5853,6 +5853,20 @@ do
 		end,
 	})
 
+	controlBox:AddToggle("AnchorTarget", {
+		Text = "Anchor Target (no fall)",
+		Default = false,
+		Callback = function(enabled)
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then Library:Notify({ Title = "Rose", Description = "Select target", Time = 2 }); return end
+			local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				hrp.Anchored = enabled
+				Library:Notify({ Title = "Rose", Description = "Anchor " .. (enabled and "ON" or "OFF"), Time = 2 })
+			end
+		end,
+	})
+
 	controlBox:AddToggle("BlockTarget", {
 		Text = "Block Target (BodyVelocity)",
 		Default = false,
