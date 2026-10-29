@@ -5656,6 +5656,49 @@ do
 		end,
 	})
 
+	local controlBox = Tabs.Target:AddGroupbox({ Side = "Left", Name = "Target Control (XOCU)" })
+	local freezeState = false
+	local blockState = false
+
+	controlBox:AddToggle("FreezeTarget", {
+		Text = "Freeze Target",
+		Default = false,
+		Callback = function(enabled)
+			freezeState = enabled
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if target and target.Character then
+				local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+				if hrp then hrp.Anchored = enabled end
+			end
+			Library:Notify({ Title = "Rose", Description = "Freeze " .. (enabled and "ON" or "OFF"), Time = 2 })
+		end,
+	})
+
+	controlBox:AddToggle("BlockTarget", {
+		Text = "Block Target (BodyVelocity)",
+		Default = false,
+		Callback = function(enabled)
+			blockState = enabled
+			local target = Players:FindFirstChild(State.runtime.target or "")
+			if not target or not target.Character then return end
+			local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+			if not hrp then return end
+			if enabled then
+				if not hrp:FindFirstChild("RoseBlock") then
+					local bv = Instance.new("BodyVelocity")
+					bv.Name = "RoseBlock"
+					bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+					bv.Velocity = Vector3.zero
+					bv.Parent = hrp
+				end
+			else
+				local bv = hrp:FindFirstChild("RoseBlock")
+				if bv then bv:Destroy() end
+			end
+			Library:Notify({ Title = "Rose", Description = "Block " .. (enabled and "ON" or "OFF"), Time = 2 })
+		end,
+	})
+
 	local ragdollBox = Tabs.Target:AddGroupbox({ Side = "Right", Name = "Ragdoll" })
 
 	ragdollBox:AddToggle("Ragdoll", {
